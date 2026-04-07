@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AspNetCoreBundlingESBuildPackageVersion Condition="'$(AspNetCoreBundlingESBuildPackageVersion)' == ''">0.27.5</AspNetCoreBundlingESBuildPackageVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AspNetCore.Bundling.ESBuild" Version="$(AspNetCoreBundlingESBuildPackageVersion)" />
+  </ItemGroup>
+
+</Project>

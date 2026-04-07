@@ -1,0 +1,22 @@
+{
+  "Bundles": [
+    {
+      "EntryPoint": "Scripts/library.ts",
+      "Output": "wwwroot/js/library.js"
+    }
+  ],
+  "Configurations": {
+    "Debug": {
+      "Defaults": {
+        "Minify": false,
+        "Sourcemap": true
+      }
+    },
+    "Release": {
+      "Defaults": {
+        "Minify": true,
+        "Sourcemap": false
+      }
+    }
+  }
+}

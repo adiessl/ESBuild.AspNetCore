@@ -1,0 +1,11 @@
+{
+  "Defaults": {
+    "Format": "not-a-real-format"
+  },
+  "Bundles": [
+    {
+      "EntryPoint": "Scripts/site.ts",
+      "Output": "wwwroot/js/site.js"
+    }
+  ]
+}

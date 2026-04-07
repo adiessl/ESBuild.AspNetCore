@@ -1,0 +1,24 @@
+{
+  "Bundles": [
+    {
+      "EntryPoint": "Scripts/site.ts",
+      "Outdir": "wwwroot/js",
+      "Splitting": true,
+      "Format": "esm"
+    }
+  ],
+  "Configurations": {
+    "Debug": {
+      "Defaults": {
+        "Minify": false,
+        "Sourcemap": true
+      }
+    },
+    "Release": {
+      "Defaults": {
+        "Minify": true,
+        "Sourcemap": false
+      }
+    }
+  }
+}

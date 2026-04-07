@@ -1,0 +1,28 @@
+{
+  "Bundles": [
+    {
+      "EntryPoint": "Scripts/site.ts",
+      "Output": "wwwroot/js/site.js"
+    }
+  ],
+  "Configurations": {
+    "Debug": {
+      "Defaults": {
+        "Minify": false,
+        "Sourcemap": true
+      }
+    },
+    "Release": {
+      "Defaults": {
+        "Minify": true,
+        "Sourcemap": false
+      },
+      "Bundles": [
+        {
+          "EntryPoint": "Scripts/site.ts",
+          "Output": "wwwroot/js/site.release.js"
+        }
+      ]
+    }
+  }
+}

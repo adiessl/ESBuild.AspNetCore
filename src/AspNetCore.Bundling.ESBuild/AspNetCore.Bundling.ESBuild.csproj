@@ -1,0 +1,78 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <PackageId>AspNetCore.Bundling.ESBuild</PackageId>
+    <!--
+      Versioning policy:
+      - ESBuildUpstreamVersion tracks the bundled upstream esbuild version.
+      - ESBuildWrapperRevision is empty for a pure upstream sync release.
+      - ESBuildWrapperRevision adds a 4th numeric component for package-only fixes.
+        Examples: 0.27.5, 0.27.5.1, 0.27.5.2
+    -->
+    <ESBuildUpstreamVersion>0.27.5</ESBuildUpstreamVersion>
+    <ESBuildWrapperRevision></ESBuildWrapperRevision>
+    <Version Condition="'$(ESBuildWrapperRevision)' == ''">$(ESBuildUpstreamVersion)</Version>
+    <Version Condition="'$(ESBuildWrapperRevision)' != ''">$(ESBuildUpstreamVersion).$(ESBuildWrapperRevision)</Version>
+    <Authors>Alexander Diessl</Authors>
+    <Description>Build-time TypeScript bundling for ASP.NET Core using esbuild and esbuild.json.</Description>
+    <PackageDescription>Build-time TypeScript bundling for ASP.NET Core using esbuild and esbuild.json.</PackageDescription>
+    <PackageTags>aspnetcore;esbuild;typescript;bundling;msbuild;</PackageTags>
+    <RepositoryUrl>https://github.com/adiessl/AspNetCore.Bundling.ESBuild</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/adiessl/AspNetCore.Bundling.ESBuild</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Title>AspNetCore.Bundling.ESBuild</Title>
+    <PackageIcon>logo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <NoWarn>$(NoWarn);NU5100;NU5128</NoWarn>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeESBuildTaskAssembly</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="build\*" Pack="true" PackagePath="build" />
+    <None Include="runtimes\**" Pack="true" PackagePath="runtimes" />
+    <None Include="..\..\logo.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <Target Name="IncludeESBuildTaskAssembly">
+    <MSBuild Projects="..\AspNetCore.Bundling.ESBuild.Tasks\AspNetCore.Bundling.ESBuild.Tasks.csproj"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)"
+             RemoveProperties="TargetFramework;TargetFrameworks" />
+
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="..\AspNetCore.Bundling.ESBuild.Tasks\bin\$(Configuration)\netstandard2.0\AspNetCore.Bundling.ESBuild.Tasks.dll">
+        <PackagePath>tasks</PackagePath>
+      </TfmSpecificPackageFile>
+      <TfmSpecificPackageFile Include="..\AspNetCore.Bundling.ESBuild.Tasks\bin\$(Configuration)\netstandard2.0\System.Text.Json.dll">
+        <PackagePath>tasks</PackagePath>
+      </TfmSpecificPackageFile>
+      <TfmSpecificPackageFile Include="..\AspNetCore.Bundling.ESBuild.Tasks\bin\$(Configuration)\netstandard2.0\System.Text.Encodings.Web.dll">
+        <PackagePath>tasks</PackagePath>
+      </TfmSpecificPackageFile>
+      <TfmSpecificPackageFile Include="..\AspNetCore.Bundling.ESBuild.Tasks\bin\$(Configuration)\netstandard2.0\System.Memory.dll">
+        <PackagePath>tasks</PackagePath>
+      </TfmSpecificPackageFile>
+      <TfmSpecificPackageFile Include="..\AspNetCore.Bundling.ESBuild.Tasks\bin\$(Configuration)\netstandard2.0\System.Buffers.dll">
+        <PackagePath>tasks</PackagePath>
+      </TfmSpecificPackageFile>
+      <TfmSpecificPackageFile Include="..\AspNetCore.Bundling.ESBuild.Tasks\bin\$(Configuration)\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll">
+        <PackagePath>tasks</PackagePath>
+      </TfmSpecificPackageFile>
+      <TfmSpecificPackageFile Include="..\AspNetCore.Bundling.ESBuild.Tasks\bin\$(Configuration)\netstandard2.0\System.Threading.Tasks.Extensions.dll">
+        <PackagePath>tasks</PackagePath>
+      </TfmSpecificPackageFile>
+      <TfmSpecificPackageFile Include="..\AspNetCore.Bundling.ESBuild.Tasks\bin\$(Configuration)\netstandard2.0\Microsoft.Bcl.AsyncInterfaces.dll">
+        <PackagePath>tasks</PackagePath>
+      </TfmSpecificPackageFile>
+    </ItemGroup>
+  </Target>
+
+</Project>

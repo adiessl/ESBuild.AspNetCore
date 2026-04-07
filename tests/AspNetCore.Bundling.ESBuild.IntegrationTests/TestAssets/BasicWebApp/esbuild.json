@@ -1,0 +1,27 @@
+{
+  "Bundles": [
+    {
+      "EntryPoint": "Scripts/site.ts",
+      "Output": "wwwroot/js/site.js"
+    },
+    {
+      "EntryPoint": "Scripts/missing-optional.ts",
+      "Output": "wwwroot/js/missing-optional.js",
+      "Optional": true
+    }
+  ],
+  "Configurations": {
+    "Debug": {
+      "Defaults": {
+        "Minify": false,
+        "Sourcemap": true
+      }
+    },
+    "Release": {
+      "Defaults": {
+        "Minify": true,
+        "Sourcemap": false
+      }
+    }
+  }
+}
