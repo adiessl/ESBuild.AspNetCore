@@ -1,0 +1,70 @@
+name: Publish NuGet Package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Determine package version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content 'src/AspNetCore.Bundling.ESBuild/AspNetCore.Bundling.ESBuild.csproj'
+          $propertyGroups = @($project.Project.PropertyGroup)
+          $upstream = ($propertyGroups | Where-Object { $_.ESBuildUpstreamVersion } | Select-Object -First 1).ESBuildUpstreamVersion
+          $wrapper = ($propertyGroups | Where-Object { $_.ESBuildWrapperRevision -ne $null } | Select-Object -First 1).ESBuildWrapperRevision
+
+          if ([string]::IsNullOrWhiteSpace($wrapper)) {
+            $version = $upstream
+          }
+          else {
+            $version = "$upstream.$wrapper"
+          }
+
+          "upstream_version=$upstream" >> $env:GITHUB_OUTPUT
+          "package_version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build solution
+        run: dotnet build AspNetCore.Bundling.ESBuild.slnx -c Release
+
+      - name: Run unit tests
+        run: dotnet test AspNetCore.Bundling.ESBuild.slnx -c Release --no-build
+
+      - name: Pack package
+        run: dotnet pack src/AspNetCore.Bundling.ESBuild/AspNetCore.Bundling.ESBuild.csproj -c Release --no-build -o artifacts/packages
+
+      - name: Run smoke tests
+        shell: pwsh
+        run: >
+          ./tests/Run-SmokeTests.ps1
+          -PackageVersion "${{ steps.version.outputs.package_version }}"
+          -UpstreamVersion "${{ steps.version.outputs.upstream_version }}"
+          -PackageFeed "${{ github.workspace }}/artifacts/packages"
+
+      - name: Push package to NuGet.org
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        shell: bash
+        run: |
+          if [[ -z "$NUGET_API_KEY" ]]; then
+            echo "The NUGET_API_KEY secret is not configured."
+            exit 1
+          fi
+
+          dotnet nuget push artifacts/packages/*.nupkg \
+            --api-key "$NUGET_API_KEY" \
+            --source "https://api.nuget.org/v3/index.json" \
+            --skip-duplicate
