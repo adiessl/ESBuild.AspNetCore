@@ -340,6 +340,6 @@ public sealed class CompileESBuild : Microsoft.Build.Utilities.Task
     {
         return Path.GetFullPath(Path.IsPathRooted(path)
             ? path
-            : Path.Combine(rootFolder, path));
+            : Path.Combine(rootFolder, path)).Replace('\\', '/');
     }
 }

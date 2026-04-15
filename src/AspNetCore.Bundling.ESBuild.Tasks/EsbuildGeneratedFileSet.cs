@@ -51,6 +51,7 @@ internal static class EsbuildGeneratedFileSet
         var normalizedOutputs = outputs
             .Where(static output => !string.IsNullOrWhiteSpace(output))
             .Select(Path.GetFullPath)
+            .Select(output => output.Replace('\\', '/'))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(static output => output, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -97,6 +98,7 @@ internal static class EsbuildGeneratedFileSet
         return outputs
             .Where(static output => !string.IsNullOrWhiteSpace(output))
             .Select(Path.GetFullPath)
+            .Select(output => output.Replace('\\', '/'))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(static output => output, StringComparer.OrdinalIgnoreCase)
             .ToArray();
