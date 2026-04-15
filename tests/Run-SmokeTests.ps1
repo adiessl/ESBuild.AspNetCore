@@ -127,9 +127,11 @@ function Test-RuntimeBinary {
 
     $version = & $runtimePath --version
     $exitCode = Get-LastExitCodeOrDefault
+    $versionText = [string]$version
 
     Assert-True ($exitCode -eq 0) "Running '$runtimePath --version' failed with exit code $exitCode."
-    Assert-True ($version.Trim() -eq $UpstreamVersion) "Expected runtime version '$UpstreamVersion' but got '$version'."
+    Assert-True (-not [string]::IsNullOrWhiteSpace($versionText)) "Expected '$runtimePath --version' to output a version."
+    Assert-True ($versionText.Trim() -eq $UpstreamVersion) "Expected runtime version '$UpstreamVersion' but got '$versionText'."
 }
 
 function Test-BasicWebApp {

@@ -62,7 +62,8 @@ public sealed class GeneratedFileSetTests
                     Path.Combine(workingDirectory, "wwwroot/js/chunk-ABC123.js"),
                     Path.Combine(workingDirectory, "wwwroot/js/site.js"),
                 ],
-                outputs);
+                outputs,
+                StringComparer.OrdinalIgnoreCase);
         }
         finally
         {
