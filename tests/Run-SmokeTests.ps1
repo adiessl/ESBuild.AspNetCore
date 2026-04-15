@@ -34,7 +34,8 @@ function Invoke-DotNet {
     try {
         $global:LASTEXITCODE = 0
         $output = & dotnet @Arguments 2>&1
-        $exitCode = Get-LastExitCodeOrDefault
+        $commandSucceeded = $?
+        $exitCode = Get-LastExitCode -CommandSucceeded:$commandSucceeded
     }
     finally {
         Pop-Location
@@ -75,14 +76,15 @@ function Normalize-ForPathContains {
     return (($Value -replace '\\', '/') -replace '/+', '/')
 }
 
-function Get-LastExitCodeOrDefault {
+function Get-LastExitCode {
     param(
-        [int]$DefaultValue = 0
+        [Parameter(Mandatory = $true)]
+        [bool]$CommandSucceeded
     )
 
     $exitCodeVariable = Get-Variable -Name LASTEXITCODE -Scope Global -ErrorAction SilentlyContinue
     if ($null -eq $exitCodeVariable) {
-        return $DefaultValue
+        return $(if ($CommandSucceeded) { 0 } else { 1 })
     }
 
     return [int]$exitCodeVariable.Value
@@ -125,11 +127,12 @@ function Test-RuntimeBinary {
     $runtimePath = [System.IO.Path]::GetFullPath((Get-EsbuildRuntimePath))
     Assert-True (Test-Path $runtimePath) "Runtime binary not found: $runtimePath"
 
-    $version = & $runtimePath --version
-    $exitCode = Get-LastExitCodeOrDefault
-    $versionText = [string]$version
+    $versionOutput = & $runtimePath --version 2>&1
+    $commandSucceeded = $?
+    $exitCode = Get-LastExitCode -CommandSucceeded:$commandSucceeded
+    $versionText = [string]::Join([Environment]::NewLine, @($versionOutput))
 
-    Assert-True ($exitCode -eq 0) "Running '$runtimePath --version' failed with exit code $exitCode."
+    Assert-True ($exitCode -eq 0) "Running '$runtimePath --version' failed with exit code $exitCode.`n$versionText"
     Assert-True (-not [string]::IsNullOrWhiteSpace($versionText)) "Expected '$runtimePath --version' to output a version."
     Assert-True ($versionText.Trim() -eq $UpstreamVersion) "Expected runtime version '$UpstreamVersion' but got '$versionText'."
 }
