@@ -20,6 +20,9 @@ internal static class EsbuildGeneratedFileSet
             primaryOutput = Path.Combine(outdirPath!, Path.GetFileNameWithoutExtension(entryPoint) + ".js");
         }
 
+        // normalize path separators
+        primaryOutput = primaryOutput.Replace('\\', '/');
+
         var files = new List<string> { primaryOutput };
 
         if (bundle.Sourcemap)

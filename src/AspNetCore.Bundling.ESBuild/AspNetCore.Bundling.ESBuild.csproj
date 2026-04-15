@@ -44,6 +44,7 @@
   <Target Name="IncludeESBuildTaskAssembly">
     <MSBuild Projects="..\AspNetCore.Bundling.ESBuild.Tasks\AspNetCore.Bundling.ESBuild.Tasks.csproj"
              Targets="Build"
+             Condition="'$(NoBuild)' != 'true'"
              Properties="Configuration=$(Configuration)"
              RemoveProperties="TargetFramework;TargetFrameworks" />
 
