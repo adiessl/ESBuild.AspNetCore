@@ -221,7 +221,7 @@ function Test-BasicWebApp {
         $projectPath,
         '-c', $Configuration,
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -257,7 +257,7 @@ function Test-BasicWebAppFromDifferentWorkingDirectory {
         $projectPath,
         '-c', 'Debug',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $invocationDirectory | Out-Null
 
@@ -280,7 +280,7 @@ function Test-BasicWebAppClean {
         $projectPath,
         '-c', 'Debug',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -292,7 +292,7 @@ function Test-BasicWebAppClean {
         $projectPath,
         '-c', 'Debug',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -317,7 +317,7 @@ function Test-BasicWebAppPublish {
         '-c', $Configuration,
         '-o', $publishDirectory,
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -345,7 +345,7 @@ function Test-MultiTargetWebApp {
         '-c', 'Debug',
         '-v:n',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory
 
@@ -370,7 +370,7 @@ function Test-SplittingWebApp {
         $projectPath,
         '-c', 'Debug',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -405,7 +405,7 @@ function Test-ConfigurationOverrideWebApp {
         $projectPath,
         '-c', 'Release',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -428,7 +428,7 @@ function Test-InvalidConfigWebApp {
         $projectPath,
         '-c', 'Debug',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory -ExpectFailure
 
@@ -450,7 +450,7 @@ function Test-BasicRcl {
         $projectPath,
         '-c', $Configuration,
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -501,7 +501,7 @@ function Test-RclHostAppPublish {
         '-c', $Configuration,
         '-o', $publishDirectory,
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingRoot | Out-Null
 
@@ -538,8 +538,7 @@ function Test-RclHostAppPublish {
 
 $ResolvedPackageFeed = [System.IO.Path]::GetFullPath($PackageFeed)
 Assert-True (Test-Path $ResolvedPackageFeed) "Package feed directory does not exist: $ResolvedPackageFeed"
-$restoreSourcesSeparator = if ($IsWindows) { '%3B' } else { ';' }
-$RestoreSources = "${ResolvedPackageFeed}${restoreSourcesSeparator}https://api.nuget.org/v3/index.json"
+$RestoreSources = $ResolvedPackageFeed
 
 Test-RuntimeBinary
 Test-BasicWebApp -Configuration 'Debug'
@@ -558,3 +557,4 @@ Test-RclHostAppPublish -Configuration 'Debug'
 Test-RclHostAppPublish -Configuration 'Release'
 
 Write-Host "Smoke tests completed successfully."
+
