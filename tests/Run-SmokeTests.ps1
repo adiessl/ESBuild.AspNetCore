@@ -30,25 +30,36 @@ function Invoke-DotNet {
     New-Item -ItemType Directory -Path $nugetPackages -Force | Out-Null
     $env:NUGET_PACKAGES = $nugetPackages
 
+    $commandText = "dotnet $($Arguments -join ' ')"
+    Write-Host "Running: $commandText"
+    Write-Host "Working directory: $WorkingDirectory"
+
     Push-Location $WorkingDirectory
     try {
         $output = & dotnet @Arguments 2>&1
-        $exitCode = $LASTEXITCODE
+        $commandSucceeded = $?
+        $exitCode = Get-LastExitCode -CommandSucceeded:$commandSucceeded
     }
     finally {
         Pop-Location
         $env:NUGET_PACKAGES = $originalNuGetPackages
     }
 
+    $outputText = [string]::Join([Environment]::NewLine, $output)
+
     if (-not $ExpectFailure -and $exitCode -ne 0) {
-        throw "dotnet $($Arguments -join ' ') failed with exit code $exitCode.`n$output"
+        Write-Host "dotnet command failed with exit code $exitCode."
+        Write-Host '--- dotnet output start ---'
+        Write-Host $outputText
+        Write-Host '--- dotnet output end ---'
+        throw "dotnet $($Arguments -join ' ') failed with exit code $exitCode.`n$outputText"
     }
 
     if ($ExpectFailure -and $exitCode -eq 0) {
-        throw "dotnet $($Arguments -join ' ') succeeded unexpectedly.`n$output"
+        throw "dotnet $($Arguments -join ' ') succeeded unexpectedly.`n$outputText"
     }
 
-    return [string]::Join([Environment]::NewLine, $output)
+    return $outputText
 }
 
 function Assert-True {
@@ -65,6 +76,76 @@ function Assert-True {
     }
 }
 
+function Get-LastExitCode {
+    param(
+        [Parameter(Mandatory = $true)]
+        [bool]$CommandSucceeded
+    )
+
+    $exitCodeVariable = Get-Variable -Name LASTEXITCODE -Scope Global -ErrorAction SilentlyContinue
+    if ($null -eq $exitCodeVariable) {
+        return $(if ($CommandSucceeded) { 0 } else { 1 })
+    }
+
+    return [int]$exitCodeVariable.Value
+}
+
+function Ensure-ExecutablePermission {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    if ($IsWindows) {
+        return
+    }
+
+    $chmodOutput = & chmod +x $Path 2>&1
+    $commandSucceeded = $?
+    $exitCode = Get-LastExitCode -CommandSucceeded:$commandSucceeded
+
+    Assert-True ($exitCode -eq 0) "Failed to mark '$Path' as executable.`n$chmodOutput"
+}
+
+function Get-LineBreakCount {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Content
+    )
+
+    return ([regex]::Matches($Content, '\r?\n')).Count
+}
+
+function Normalize-PathForComparison {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $normalized = $Path -replace '\\', '/'
+    $normalized = $normalized.TrimEnd('/')
+    return $normalized.ToLowerInvariant()
+}
+
+function Get-ManifestContentRoots {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Manifest
+    )
+
+    $contentRoots = @()
+
+    if ($null -ne $Manifest.PSObject.Properties['DiscoveryPatterns']) {
+        $contentRoots += @($Manifest.DiscoveryPatterns | ForEach-Object { $_.ContentRoot })
+    }
+
+    if ($null -ne $Manifest.PSObject.Properties['ContentRoots']) {
+        $contentRoots += @($Manifest.ContentRoots)
+    }
+
+    return @($contentRoots | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+}
+
 function New-TempCopy {
     param(
         [Parameter(Mandatory = $true)]
@@ -79,7 +160,20 @@ function New-TempCopy {
 
     $target = Join-Path $root $Name
     Copy-Item -Path $SourceDirectory -Destination $target -Recurse
-    return $target
+
+    if (-not $IsWindows) {
+        $realPathOutput = & realpath $target 2>&1
+        $commandSucceeded = $?
+        $exitCode = Get-LastExitCode -CommandSucceeded:$commandSucceeded
+        if ($exitCode -eq 0) {
+            $realPath = [string]::Join([Environment]::NewLine, @($realPathOutput)).Trim()
+            if (-not [string]::IsNullOrWhiteSpace($realPath)) {
+                return $realPath
+            }
+        }
+    }
+
+    return (Resolve-Path -LiteralPath $target).Path
 }
 
 function Get-EsbuildRuntimePath {
@@ -101,11 +195,14 @@ function Get-EsbuildRuntimePath {
 function Test-RuntimeBinary {
     $runtimePath = [System.IO.Path]::GetFullPath((Get-EsbuildRuntimePath))
     Assert-True (Test-Path $runtimePath) "Runtime binary not found: $runtimePath"
+    Ensure-ExecutablePermission -Path $runtimePath
 
-    $version = & $runtimePath --version
-    $exitCode = $LASTEXITCODE
+    $versionOutput = & $runtimePath --version 2>&1
+    $commandSucceeded = $?
+    $exitCode = Get-LastExitCode -CommandSucceeded:$commandSucceeded
+    $version = [string]::Join([Environment]::NewLine, @($versionOutput))
 
-    Assert-True ($exitCode -eq 0) "Running '$runtimePath --version' failed with exit code $exitCode."
+    Assert-True ($exitCode -eq 0) "Running '$runtimePath --version' failed with exit code $exitCode.`n$version"
     Assert-True ($version.Trim() -eq $UpstreamVersion) "Expected runtime version '$UpstreamVersion' but got '$version'."
 }
 
@@ -124,7 +221,7 @@ function Test-BasicWebApp {
         $projectPath,
         '-c', $Configuration,
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -137,15 +234,15 @@ function Test-BasicWebApp {
 
     $scriptContent = Get-Content $scriptPath -Raw
     Assert-True ($scriptContent.Contains('Hello from AspNetCore.Bundling.ESBuild')) "Bundled output does not contain the expected content."
+    $lineBreakCount = Get-LineBreakCount -Content $scriptContent
 
     if ($Configuration -eq 'Debug') {
         Assert-True (Test-Path $mapPath) "Expected sourcemap for Debug build: $mapPath"
-        Assert-True ($scriptContent.Contains([Environment]::NewLine)) 'Expected Debug output to contain line breaks.'
+        Assert-True ($lineBreakCount -ge 1) 'Expected Debug output to contain line breaks.'
     }
     else {
         Assert-True (-not (Test-Path $mapPath)) "Did not expect sourcemap for Release build: $mapPath"
-        $lineCount = ([regex]::Matches($scriptContent, [Environment]::NewLine)).Count
-        Assert-True ($lineCount -le 1) "Expected Release output to be minified to a single line or near-single line, but found $lineCount line breaks."
+        Assert-True ($lineBreakCount -le 1) "Expected Release output to be minified to a single line or near-single line, but found $lineBreakCount line breaks."
     }
 }
 
@@ -160,7 +257,7 @@ function Test-BasicWebAppFromDifferentWorkingDirectory {
         $projectPath,
         '-c', 'Debug',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $invocationDirectory | Out-Null
 
@@ -183,7 +280,7 @@ function Test-BasicWebAppClean {
         $projectPath,
         '-c', 'Debug',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -195,7 +292,7 @@ function Test-BasicWebAppClean {
         $projectPath,
         '-c', 'Debug',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -220,7 +317,7 @@ function Test-BasicWebAppPublish {
         '-c', $Configuration,
         '-o', $publishDirectory,
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -248,7 +345,7 @@ function Test-MultiTargetWebApp {
         '-c', 'Debug',
         '-v:n',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory
 
@@ -273,7 +370,7 @@ function Test-SplittingWebApp {
         $projectPath,
         '-c', 'Debug',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -308,7 +405,7 @@ function Test-ConfigurationOverrideWebApp {
         $projectPath,
         '-c', 'Release',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -331,7 +428,7 @@ function Test-InvalidConfigWebApp {
         $projectPath,
         '-c', 'Debug',
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory -ExpectFailure
 
@@ -353,7 +450,7 @@ function Test-BasicRcl {
         $projectPath,
         '-c', $Configuration,
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
 
@@ -369,13 +466,17 @@ function Test-BasicRcl {
     Assert-True (Test-Path $buildManifestPath) "Expected static web assets build manifest: $buildManifestPath"
     Assert-True (Test-Path $developmentManifestPath) "Expected static web assets development manifest: $developmentManifestPath"
 
-    $buildManifest = Get-Content $buildManifestPath -Raw
-    $developmentManifest = Get-Content $developmentManifestPath -Raw
-    $normalizedWwwroot = ($workingDirectory.Replace('\', '/') + '/wwwroot/')
+    $buildManifest = Get-Content $buildManifestPath -Raw | ConvertFrom-Json
+    $developmentManifest = Get-Content $developmentManifestPath -Raw | ConvertFrom-Json
+    $expectedWwwroot = Normalize-PathForComparison -Path (Join-Path $workingDirectory 'wwwroot')
 
-    Assert-True ($buildManifest.Contains($normalizedWwwroot)) 'Expected the static web assets build manifest to point at the RCL wwwroot content root.'
-    Assert-True ($buildManifest.Contains('"Pattern":"**"')) 'Expected the static web assets build manifest to include the recursive discovery pattern for wwwroot.'
-    Assert-True ($developmentManifest.Contains($normalizedWwwroot)) 'Expected the static web assets development manifest to point at the RCL wwwroot content root.'
+    $buildManifestRoots = @(Get-ManifestContentRoots -Manifest $buildManifest | ForEach-Object { Normalize-PathForComparison -Path $_ })
+    $developmentManifestRoots = @(Get-ManifestContentRoots -Manifest $developmentManifest | ForEach-Object { Normalize-PathForComparison -Path $_ })
+    $buildPatterns = @($buildManifest.DiscoveryPatterns | ForEach-Object { $_.Pattern })
+
+    Assert-True ($buildManifestRoots -icontains $expectedWwwroot) 'Expected the static web assets build manifest to point at the RCL wwwroot content root.'
+    Assert-True ($buildPatterns -contains '**') 'Expected the static web assets build manifest to include the recursive discovery pattern for wwwroot.'
+    Assert-True ($developmentManifestRoots -icontains $expectedWwwroot) 'Expected the static web assets development manifest to point at the RCL wwwroot content root.'
 }
 
 function Test-RclHostAppPublish {
@@ -388,6 +489,11 @@ function Test-RclHostAppPublish {
     $workingRoot = New-TempCopy -SourceDirectory $source -Name "RclHostApp-$Configuration"
     $hostProjectPath = Join-Path $workingRoot 'HostApp/HostApp.csproj'
     $publishDirectory = Join-Path $workingRoot 'publish'
+    $rclProjectPath = Join-Path $workingRoot 'BasicRcl/BasicRcl.csproj'
+
+    Write-Host "RclHostApp working root: $workingRoot"
+    Write-Host "Host project path: $hostProjectPath"
+    Write-Host "RCL project path: $rclProjectPath"
 
     Invoke-DotNet -Arguments @(
         'publish',
@@ -395,7 +501,7 @@ function Test-RclHostAppPublish {
         '-c', $Configuration,
         '-o', $publishDirectory,
         "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
-        "-p:RestoreSources=$RestoreSources",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingRoot | Out-Null
 
@@ -411,12 +517,16 @@ function Test-RclHostAppPublish {
     $rclBundleContent = Get-Content $rclBundlePath -Raw
     Assert-True ($rclBundleContent.Contains('Hosted BasicRcl says hello')) 'Expected referenced RCL bundled output to contain the expected content.'
 
-    $hostPublishManifest = Get-Content $hostPublishManifestPath -Raw
-    $normalizedRclWwwroot = ($workingRoot.Replace('\', '/') + '/BasicRcl/wwwroot/')
+    $hostPublishManifest = Get-Content $hostPublishManifestPath -Raw | ConvertFrom-Json
+    $expectedRclWwwroot = Normalize-PathForComparison -Path (Join-Path $workingRoot 'BasicRcl/wwwroot')
 
-    Assert-True ($hostPublishManifest.Contains($normalizedRclWwwroot)) 'Expected the host publish manifest to point at the referenced RCL wwwroot content root.'
-    Assert-True ($hostPublishManifest.Contains('"_content/BasicRcl"')) 'Expected the host publish manifest to use the _content/BasicRcl base path.'
-    Assert-True ($hostPublishManifest.Contains('"Pattern":"**"')) 'Expected the host publish manifest to include the recursive discovery pattern for the RCL content root.'
+    $hostPublishRoots = @(Get-ManifestContentRoots -Manifest $hostPublishManifest | ForEach-Object { Normalize-PathForComparison -Path $_ })
+    $hostPublishBasePaths = @($hostPublishManifest.DiscoveryPatterns | ForEach-Object { $_.BasePath })
+    $hostPublishPatterns = @($hostPublishManifest.DiscoveryPatterns | ForEach-Object { $_.Pattern })
+
+    Assert-True ($hostPublishRoots -icontains $expectedRclWwwroot) 'Expected the host publish manifest to point at the referenced RCL wwwroot content root.'
+    Assert-True ($hostPublishBasePaths -contains '_content/BasicRcl') 'Expected the host publish manifest to use the _content/BasicRcl base path.'
+    Assert-True ($hostPublishPatterns -contains '**') 'Expected the host publish manifest to include the recursive discovery pattern for the RCL content root.'
 
     if ($Configuration -eq 'Debug') {
         Assert-True (Test-Path $rclMapPath) "Expected referenced RCL sourcemap to exist before host publish: $rclMapPath"
@@ -428,7 +538,7 @@ function Test-RclHostAppPublish {
 
 $ResolvedPackageFeed = [System.IO.Path]::GetFullPath($PackageFeed)
 Assert-True (Test-Path $ResolvedPackageFeed) "Package feed directory does not exist: $ResolvedPackageFeed"
-$RestoreSources = "$ResolvedPackageFeed;https://api.nuget.org/v3/index.json"
+$RestoreSources = $ResolvedPackageFeed
 
 Test-RuntimeBinary
 Test-BasicWebApp -Configuration 'Debug'
@@ -447,3 +557,4 @@ Test-RclHostAppPublish -Configuration 'Debug'
 Test-RclHostAppPublish -Configuration 'Release'
 
 Write-Host "Smoke tests completed successfully."
+
