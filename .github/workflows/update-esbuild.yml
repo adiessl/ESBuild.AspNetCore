@@ -26,7 +26,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: "8.0.x"
 
       - name: Determine target version
         id: version
@@ -79,9 +79,17 @@ jobs:
           chmod +x src/ESBuild.AspNetCore/runtimes/osx-x64/esbuild
           chmod +x src/ESBuild.AspNetCore/runtimes/osx-arm64/esbuild
 
+      - name: Build solution
+        if: steps.version.outputs.update_required == 'true'
+        run: dotnet build ESBuild.AspNetCore.slnx -c Release
+
+      - name: Run unit tests
+        if: steps.version.outputs.update_required == 'true'
+        run: dotnet test ESBuild.AspNetCore.slnx -c Release --no-build
+
       - name: Validate package
         if: steps.version.outputs.update_required == 'true'
-        run: dotnet pack src/ESBuild.AspNetCore/ESBuild.AspNetCore.csproj -c Release -o artifacts/packages
+        run: dotnet pack src/ESBuild.AspNetCore/ESBuild.AspNetCore.csproj -c Release --no-build -o artifacts/packages
 
       - name: Create Pull Request
         if: steps.version.outputs.update_required == 'true'
