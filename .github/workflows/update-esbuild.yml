@@ -100,10 +100,19 @@ jobs:
           -UpstreamVersion "${{ steps.version.outputs.target_version }}"
           -PackageFeed "${{ github.workspace }}/artifacts/packages"
 
+      - name: Generate GitHub App token
+        if: steps.version.outputs.update_required == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.PR_CREATOR_APP_ID }}
+          private-key: ${{ secrets.PR_CREATOR_APP_PRIVATE_KEY }}
+
       - name: Create Pull Request
         if: steps.version.outputs.update_required == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
+          token: ${{ steps.app-token.outputs.token }}
           commit-message: Update esbuild to ${{ steps.version.outputs.target_version }}
           branch: ${{ steps.version.outputs.branch_name }}
           delete-branch: true
