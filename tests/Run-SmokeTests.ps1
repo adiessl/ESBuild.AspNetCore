@@ -65,6 +65,15 @@ function Assert-True {
     }
 }
 
+function Get-LineBreakCount {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Content
+    )
+
+    return ([regex]::Matches($Content, '\r?\n')).Count
+}
+
 function New-TempCopy {
     param(
         [Parameter(Mandatory = $true)]
@@ -137,15 +146,15 @@ function Test-BasicWebApp {
 
     $scriptContent = Get-Content $scriptPath -Raw
     Assert-True ($scriptContent.Contains('Hello from AspNetCore.Bundling.ESBuild')) "Bundled output does not contain the expected content."
+    $lineBreakCount = Get-LineBreakCount -Content $scriptContent
 
     if ($Configuration -eq 'Debug') {
         Assert-True (Test-Path $mapPath) "Expected sourcemap for Debug build: $mapPath"
-        Assert-True ($scriptContent.Contains([Environment]::NewLine)) 'Expected Debug output to contain line breaks.'
+        Assert-True ($lineBreakCount -ge 1) 'Expected Debug output to contain line breaks.'
     }
     else {
         Assert-True (-not (Test-Path $mapPath)) "Did not expect sourcemap for Release build: $mapPath"
-        $lineCount = ([regex]::Matches($scriptContent, [Environment]::NewLine)).Count
-        Assert-True ($lineCount -le 1) "Expected Release output to be minified to a single line or near-single line, but found $lineCount line breaks."
+        Assert-True ($lineBreakCount -le 1) "Expected Release output to be minified to a single line or near-single line, but found $lineBreakCount line breaks."
     }
 }
 
