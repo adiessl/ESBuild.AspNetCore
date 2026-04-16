@@ -70,6 +70,15 @@ jobs:
         if: steps.version.outputs.update_required == 'true'
         run: dotnet run --file scripts/update_esbuild.cs -- --version "${{ steps.version.outputs.target_version }}"
 
+      - name: Ensure Unix runtime executables are marked executable
+        if: steps.version.outputs.update_required == 'true'
+        shell: bash
+        run: |
+          chmod +x src/AspNetCore.Bundling.ESBuild/runtimes/linux-x64/esbuild
+          chmod +x src/AspNetCore.Bundling.ESBuild/runtimes/linux-arm64/esbuild
+          chmod +x src/AspNetCore.Bundling.ESBuild/runtimes/osx-x64/esbuild
+          chmod +x src/AspNetCore.Bundling.ESBuild/runtimes/osx-arm64/esbuild
+
       - name: Validate package
         if: steps.version.outputs.update_required == 'true'
         run: dotnet pack src/AspNetCore.Bundling.ESBuild/AspNetCore.Bundling.ESBuild.csproj -c Release -o artifacts/packages
