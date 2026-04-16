@@ -27,11 +27,13 @@ public sealed class GeneratedFileSetTests
     [Fact]
     public void GetExpectedOutputs_UsesOutdirForPrimaryBundle()
     {
-        var bundle = CreateBundle(output: null, outdir: "wwwroot/js", splitting: true, sourcemap: true);
-        var outputs = EsbuildGeneratedFileSet.GetExpectedOutputs(bundle, "Scripts/site.ts", null, "wwwroot/js");
+        const string outdir = "wwwroot/js";
+        var bundle = CreateBundle(output: null, outdir: outdir, splitting: true, sourcemap: true);
+        var outputs = EsbuildGeneratedFileSet.GetExpectedOutputs(bundle, "Scripts/site.ts", null, outdir);
+        var expectedPrimaryOutput = Path.Combine(outdir, "site.js");
 
         Assert.Equal(
-            ["wwwroot/js/site.js", "wwwroot/js/site.js.map"],
+            [expectedPrimaryOutput, expectedPrimaryOutput + ".map"],
             outputs);
     }
 
@@ -59,10 +61,11 @@ public sealed class GeneratedFileSetTests
 
             Assert.Equal(
                 [
-                    Path.Combine(workingDirectory, "wwwroot/js/chunk-ABC123.js"),
-                    Path.Combine(workingDirectory, "wwwroot/js/site.js"),
+                    Path.GetFullPath(Path.Combine(workingDirectory, "wwwroot", "js", "chunk-ABC123.js")),
+                    Path.GetFullPath(Path.Combine(workingDirectory, "wwwroot", "js", "site.js")),
                 ],
-                outputs);
+                outputs,
+                StringComparer.OrdinalIgnoreCase);
         }
         finally
         {
