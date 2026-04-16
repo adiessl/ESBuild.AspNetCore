@@ -91,6 +91,15 @@ jobs:
         if: steps.version.outputs.update_required == 'true'
         run: dotnet pack src/ESBuild.AspNetCore/ESBuild.AspNetCore.csproj -c Release --no-build -o artifacts/packages
 
+      - name: Run smoke tests
+        if: steps.version.outputs.update_required == 'true'
+        shell: pwsh
+        run: >
+          ./tests/Run-SmokeTests.ps1
+          -PackageVersion "${{ steps.version.outputs.target_version }}"
+          -UpstreamVersion "${{ steps.version.outputs.target_version }}"
+          -PackageFeed "${{ github.workspace }}/artifacts/packages"
+
       - name: Create Pull Request
         if: steps.version.outputs.update_required == 'true'
         uses: peter-evans/create-pull-request@v8
