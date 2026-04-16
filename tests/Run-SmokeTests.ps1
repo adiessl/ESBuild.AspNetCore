@@ -538,7 +538,8 @@ function Test-RclHostAppPublish {
 
 $ResolvedPackageFeed = [System.IO.Path]::GetFullPath($PackageFeed)
 Assert-True (Test-Path $ResolvedPackageFeed) "Package feed directory does not exist: $ResolvedPackageFeed"
-$RestoreSources = "$ResolvedPackageFeed;https://api.nuget.org/v3/index.json"
+$restoreSourcesSeparator = if ($IsWindows) { '%3B' } else { ';' }
+$RestoreSources = "${ResolvedPackageFeed}${restoreSourcesSeparator}https://api.nuget.org/v3/index.json"
 
 Test-RuntimeBinary
 Test-BasicWebApp -Configuration 'Debug'
