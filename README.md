@@ -1,5 +1,8 @@
 # ESBuild.AspNetCore
 
+[![CI](https://github.com/adiessl/ESBuild.AspNetCore/actions/workflows/ci.yml/badge.svg)](https://github.com/adiessl/ESBuild.AspNetCore/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/ESBuild.AspNetCore.svg)](https://www.nuget.org/packages/ESBuild.AspNetCore)
+
 `ESBuild.AspNetCore` is a build-time TypeScript bundling package for ASP.NET Core projects. It was inspired by [`AspNetCore.SassCompiler`](https://github.com/koenvzeijl/AspNetCore.SassCompiler), with the same goal of making asset compilation work as a NuGet-powered MSBuild integration instead of a separate Node-based toolchain step.
 
 This repository is currently 100% AI-generated code. Because of that, no pull request will be accepted without prior approval from the maintainer. If you want to contribute, open an issue first and wait for confirmation before investing time in a PR.
