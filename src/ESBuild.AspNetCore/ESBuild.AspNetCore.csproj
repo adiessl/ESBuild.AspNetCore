@@ -12,7 +12,7 @@
       - ESBuildWrapperRevision adds a 4th numeric component for package-only fixes.
         Examples: 0.27.5, 0.27.5.1, 0.27.5.2
     -->
-    <ESBuildUpstreamVersion>0.27.5</ESBuildUpstreamVersion>
+    <ESBuildUpstreamVersion>0.28.0</ESBuildUpstreamVersion>
     <ESBuildWrapperRevision></ESBuildWrapperRevision>
     <Version Condition="'$(ESBuildWrapperRevision)' == ''">$(ESBuildUpstreamVersion)</Version>
     <Version Condition="'$(ESBuildWrapperRevision)' != ''">$(ESBuildUpstreamVersion).$(ESBuildWrapperRevision)</Version>
