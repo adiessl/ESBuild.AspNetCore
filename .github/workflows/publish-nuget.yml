@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   publish:
@@ -68,3 +68,15 @@ jobs:
             --api-key "$NUGET_API_KEY" \
             --source "https://api.nuget.org/v3/index.json" \
             --skip-duplicate
+
+      - name: Create GitHub release and upload NuGet package
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ steps.version.outputs.package_version }}
+          name: v${{ steps.version.outputs.package_version }}
+          generate_release_notes: true
+          overwrite_files: true
+          fail_on_unmatched_files: false
+          files: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
