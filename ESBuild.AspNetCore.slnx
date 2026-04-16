@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ESBuild.AspNetCore.Tasks/ESBuild.AspNetCore.Tasks.csproj" />
+    <Project Path="src/ESBuild.AspNetCore/ESBuild.AspNetCore.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ESBuild.AspNetCore.Tasks.Tests/ESBuild.AspNetCore.Tasks.Tests.csproj" />
+  </Folder>
+</Solution>

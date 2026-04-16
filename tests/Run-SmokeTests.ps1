@@ -155,7 +155,7 @@ function New-TempCopy {
         [string]$Name
     )
 
-    $root = Join-Path ([System.IO.Path]::GetTempPath()) ('AspNetCore.Bundling.ESBuild.Tests.' + [Guid]::NewGuid().ToString('N'))
+    $root = Join-Path ([System.IO.Path]::GetTempPath()) ('ESBuild.AspNetCore.Tests.' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $root | Out-Null
 
     $target = Join-Path $root $Name
@@ -178,7 +178,7 @@ function New-TempCopy {
 
 function Get-EsbuildRuntimePath {
     $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-    $runtimesRoot = Join-Path $repoRoot 'src/AspNetCore.Bundling.ESBuild/runtimes'
+    $runtimesRoot = Join-Path $repoRoot 'src/ESBuild.AspNetCore/runtimes'
     $architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
 
     if ($IsWindows) {
@@ -212,7 +212,7 @@ function Test-BasicWebApp {
         [string]$Configuration
     )
 
-    $source = Join-Path $PSScriptRoot 'AspNetCore.Bundling.ESBuild.IntegrationTests/TestAssets/BasicWebApp'
+    $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/BasicWebApp'
     $workingDirectory = New-TempCopy -SourceDirectory $source -Name "BasicWebApp-$Configuration"
     $projectPath = Join-Path $workingDirectory 'BasicWebApp.csproj'
 
@@ -220,7 +220,7 @@ function Test-BasicWebApp {
         'build',
         $projectPath,
         '-c', $Configuration,
-        "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
         "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
@@ -233,7 +233,7 @@ function Test-BasicWebApp {
     Assert-True (-not (Test-Path $optionalPath)) "Optional bundle output should not exist: $optionalPath"
 
     $scriptContent = Get-Content $scriptPath -Raw
-    Assert-True ($scriptContent.Contains('Hello from AspNetCore.Bundling.ESBuild')) "Bundled output does not contain the expected content."
+    Assert-True ($scriptContent.Contains('Hello from ESBuild.AspNetCore')) "Bundled output does not contain the expected content."
     $lineBreakCount = Get-LineBreakCount -Content $scriptContent
 
     if ($Configuration -eq 'Debug') {
@@ -247,7 +247,7 @@ function Test-BasicWebApp {
 }
 
 function Test-BasicWebAppFromDifferentWorkingDirectory {
-    $source = Join-Path $PSScriptRoot 'AspNetCore.Bundling.ESBuild.IntegrationTests/TestAssets/BasicWebApp'
+    $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/BasicWebApp'
     $workingDirectory = New-TempCopy -SourceDirectory $source -Name 'BasicWebApp-ExternalWorkingDirectory'
     $projectPath = Join-Path $workingDirectory 'BasicWebApp.csproj'
     $invocationDirectory = Split-Path -Parent $workingDirectory
@@ -256,7 +256,7 @@ function Test-BasicWebAppFromDifferentWorkingDirectory {
         'build',
         $projectPath,
         '-c', 'Debug',
-        "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
         "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $invocationDirectory | Out-Null
@@ -269,7 +269,7 @@ function Test-BasicWebAppFromDifferentWorkingDirectory {
 }
 
 function Test-BasicWebAppClean {
-    $source = Join-Path $PSScriptRoot 'AspNetCore.Bundling.ESBuild.IntegrationTests/TestAssets/BasicWebApp'
+    $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/BasicWebApp'
     $workingDirectory = New-TempCopy -SourceDirectory $source -Name 'BasicWebApp-Clean'
     $projectPath = Join-Path $workingDirectory 'BasicWebApp.csproj'
     $scriptPath = Join-Path $workingDirectory 'wwwroot' 'js' 'site.js'
@@ -279,7 +279,7 @@ function Test-BasicWebAppClean {
         'build',
         $projectPath,
         '-c', 'Debug',
-        "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
         "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
@@ -291,7 +291,7 @@ function Test-BasicWebAppClean {
         'clean',
         $projectPath,
         '-c', 'Debug',
-        "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
         "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
@@ -306,7 +306,7 @@ function Test-BasicWebAppPublish {
         [string]$Configuration
     )
 
-    $source = Join-Path $PSScriptRoot 'AspNetCore.Bundling.ESBuild.IntegrationTests/TestAssets/BasicWebApp'
+    $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/BasicWebApp'
     $workingDirectory = New-TempCopy -SourceDirectory $source -Name "BasicWebAppPublish-$Configuration"
     $projectPath = Join-Path $workingDirectory 'BasicWebApp.csproj'
     $publishDirectory = Join-Path $workingDirectory 'publish'
@@ -316,7 +316,7 @@ function Test-BasicWebAppPublish {
         $projectPath,
         '-c', $Configuration,
         '-o', $publishDirectory,
-        "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
         "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
@@ -335,7 +335,7 @@ function Test-BasicWebAppPublish {
 }
 
 function Test-MultiTargetWebApp {
-    $source = Join-Path $PSScriptRoot 'AspNetCore.Bundling.ESBuild.IntegrationTests/TestAssets/MultiTargetWebApp'
+    $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/MultiTargetWebApp'
     $workingDirectory = New-TempCopy -SourceDirectory $source -Name 'MultiTargetWebApp'
     $projectPath = Join-Path $workingDirectory 'MultiTargetWebApp.csproj'
 
@@ -344,7 +344,7 @@ function Test-MultiTargetWebApp {
         $projectPath,
         '-c', 'Debug',
         '-v:n',
-        "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
         "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory
@@ -352,7 +352,7 @@ function Test-MultiTargetWebApp {
     $scriptPath = Join-Path $workingDirectory 'wwwroot' 'js' 'site.js'
     $net8OutputPath = Join-Path $workingDirectory 'bin/Debug/net8.0/MultiTargetWebApp.dll'
     $net6OutputPath = Join-Path $workingDirectory 'bin/Debug/net6.0/MultiTargetWebApp.dll'
-    $bundleInvocationCount = ([regex]::Matches($output, [regex]::Escape('Bundling TypeScript:'))).Count
+    $bundleInvocationCount = ([regex]::Matches($output, [regex]::Escape('Building TypeScript:'))).Count
 
     Assert-True (Test-Path $scriptPath) "Expected bundled script to exist for multitarget build: $scriptPath"
     Assert-True (Test-Path $net8OutputPath) "Expected net8.0 build output to exist: $net8OutputPath"
@@ -361,7 +361,7 @@ function Test-MultiTargetWebApp {
 }
 
 function Test-SplittingWebApp {
-    $source = Join-Path $PSScriptRoot 'AspNetCore.Bundling.ESBuild.IntegrationTests/TestAssets/SplittingWebApp'
+    $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/SplittingWebApp'
     $workingDirectory = New-TempCopy -SourceDirectory $source -Name 'SplittingWebApp'
     $projectPath = Join-Path $workingDirectory 'SplittingWebApp.csproj'
 
@@ -369,7 +369,7 @@ function Test-SplittingWebApp {
         'build',
         $projectPath,
         '-c', 'Debug',
-        "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
         "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
@@ -379,7 +379,7 @@ function Test-SplittingWebApp {
     $siteMapPath = Join-Path $outputDirectory 'site.js.map'
     $jsFiles = @(Get-ChildItem -Path $outputDirectory -Filter '*.js' -File)
     $chunkFiles = @($jsFiles | Where-Object { $_.Name -ne 'site.js' })
-    $manifestDirectory = Join-Path $workingDirectory 'obj' 'AspNetCore.Bundling.ESBuild'
+    $manifestDirectory = Join-Path $workingDirectory 'obj' 'ESBuild.AspNetCore'
     $manifestFile = @(Get-ChildItem -Path $manifestDirectory -Filter '*.outputs.json' -File | Select-Object -First 1)
 
     Assert-True (Test-Path $sitePath) "Expected split bundle entry output to exist: $sitePath"
@@ -396,7 +396,7 @@ function Test-SplittingWebApp {
 }
 
 function Test-ConfigurationOverrideWebApp {
-    $source = Join-Path $PSScriptRoot 'AspNetCore.Bundling.ESBuild.IntegrationTests/TestAssets/ConfigurationOverrideWebApp'
+    $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/ConfigurationOverrideWebApp'
     $workingDirectory = New-TempCopy -SourceDirectory $source -Name 'ConfigurationOverrideWebApp'
     $projectPath = Join-Path $workingDirectory 'ConfigurationOverrideWebApp.csproj'
 
@@ -404,7 +404,7 @@ function Test-ConfigurationOverrideWebApp {
         'build',
         $projectPath,
         '-c', 'Release',
-        "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
         "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
@@ -419,7 +419,7 @@ function Test-ConfigurationOverrideWebApp {
 }
 
 function Test-InvalidConfigWebApp {
-    $source = Join-Path $PSScriptRoot 'AspNetCore.Bundling.ESBuild.IntegrationTests/TestAssets/InvalidConfigWebApp'
+    $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/InvalidConfigWebApp'
     $workingDirectory = New-TempCopy -SourceDirectory $source -Name 'InvalidConfigWebApp'
     $projectPath = Join-Path $workingDirectory 'InvalidConfigWebApp.csproj'
 
@@ -427,7 +427,7 @@ function Test-InvalidConfigWebApp {
         'build',
         $projectPath,
         '-c', 'Debug',
-        "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
         "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory -ExpectFailure
@@ -441,7 +441,7 @@ function Test-BasicRcl {
         [string]$Configuration
     )
 
-    $source = Join-Path $PSScriptRoot 'AspNetCore.Bundling.ESBuild.IntegrationTests/TestAssets/BasicRcl'
+    $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/BasicRcl'
     $workingDirectory = New-TempCopy -SourceDirectory $source -Name "BasicRcl-$Configuration"
     $projectPath = Join-Path $workingDirectory 'BasicRcl.csproj'
 
@@ -449,7 +449,7 @@ function Test-BasicRcl {
         'build',
         $projectPath,
         '-c', $Configuration,
-        "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
         "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory | Out-Null
@@ -485,7 +485,7 @@ function Test-RclHostAppPublish {
         [string]$Configuration
     )
 
-    $source = Join-Path $PSScriptRoot 'AspNetCore.Bundling.ESBuild.IntegrationTests/TestAssets/RclHostApp'
+    $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/RclHostApp'
     $workingRoot = New-TempCopy -SourceDirectory $source -Name "RclHostApp-$Configuration"
     $hostProjectPath = Join-Path $workingRoot 'HostApp/HostApp.csproj'
     $publishDirectory = Join-Path $workingRoot 'publish'
@@ -500,7 +500,7 @@ function Test-RclHostAppPublish {
         $hostProjectPath,
         '-c', $Configuration,
         '-o', $publishDirectory,
-        "-p:AspNetCoreBundlingESBuildPackageVersion=$PackageVersion",
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
         "-p:RestoreAdditionalProjectSources=$RestoreSources",
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingRoot | Out-Null

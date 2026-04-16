@@ -74,14 +74,14 @@ jobs:
         if: steps.version.outputs.update_required == 'true'
         shell: bash
         run: |
-          chmod +x src/AspNetCore.Bundling.ESBuild/runtimes/linux-x64/esbuild
-          chmod +x src/AspNetCore.Bundling.ESBuild/runtimes/linux-arm64/esbuild
-          chmod +x src/AspNetCore.Bundling.ESBuild/runtimes/osx-x64/esbuild
-          chmod +x src/AspNetCore.Bundling.ESBuild/runtimes/osx-arm64/esbuild
+          chmod +x src/ESBuild.AspNetCore/runtimes/linux-x64/esbuild
+          chmod +x src/ESBuild.AspNetCore/runtimes/linux-arm64/esbuild
+          chmod +x src/ESBuild.AspNetCore/runtimes/osx-x64/esbuild
+          chmod +x src/ESBuild.AspNetCore/runtimes/osx-arm64/esbuild
 
       - name: Validate package
         if: steps.version.outputs.update_required == 'true'
-        run: dotnet pack src/AspNetCore.Bundling.ESBuild/AspNetCore.Bundling.ESBuild.csproj -c Release -o artifacts/packages
+        run: dotnet pack src/ESBuild.AspNetCore/ESBuild.AspNetCore.csproj -c Release -o artifacts/packages
 
       - name: Create Pull Request
         if: steps.version.outputs.update_required == 'true'

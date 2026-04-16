@@ -74,7 +74,7 @@ internal static class UpdateEsbuildApp
 
         if (!match.Success)
         {
-            throw new InvalidOperationException("Could not find ESBuildUpstreamVersion in AspNetCore.Bundling.ESBuild.csproj.");
+            throw new InvalidOperationException("Could not find ESBuildUpstreamVersion in ESBuild.AspNetCore.csproj.");
         }
 
         return match.Groups[1].Value.Trim();
@@ -192,8 +192,8 @@ internal static class UpdateEsbuildApp
         => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(filePath)!, ".."));
 
     private static string GetPackageProjectPath()
-        => Path.Combine(GetRepositoryRoot(), "src", "AspNetCore.Bundling.ESBuild", "AspNetCore.Bundling.ESBuild.csproj");
+        => Path.Combine(GetRepositoryRoot(), "src", "ESBuild.AspNetCore", "ESBuild.AspNetCore.csproj");
 
     private static string GetRuntimesRootPath()
-        => Path.Combine(GetRepositoryRoot(), "src", "AspNetCore.Bundling.ESBuild", "runtimes");
+        => Path.Combine(GetRepositoryRoot(), "src", "ESBuild.AspNetCore", "runtimes");
 }

@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/AspNetCore.Bundling.ESBuild.Tasks/AspNetCore.Bundling.ESBuild.Tasks.csproj" />
-    <Project Path="src/AspNetCore.Bundling.ESBuild/AspNetCore.Bundling.ESBuild.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/AspNetCore.Bundling.ESBuild.Tasks.Tests/AspNetCore.Bundling.ESBuild.Tasks.Tests.csproj" />
-  </Folder>
-</Solution>

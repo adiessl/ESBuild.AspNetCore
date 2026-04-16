@@ -1,6 +1,6 @@
-# AspNetCore.Bundling.ESBuild
+# ESBuild.AspNetCore
 
-`AspNetCore.Bundling.ESBuild` is a build-time TypeScript bundling package for ASP.NET Core projects. It was inspired by [`AspNetCore.SassCompiler`](https://github.com/koenvzeijl/AspNetCore.SassCompiler), with the same goal of making asset compilation work as a NuGet-powered MSBuild integration instead of a separate Node-based toolchain step.
+`ESBuild.AspNetCore` is a build-time TypeScript bundling package for ASP.NET Core projects. It was inspired by [`AspNetCore.SassCompiler`](https://github.com/koenvzeijl/AspNetCore.SassCompiler), with the same goal of making asset compilation work as a NuGet-powered MSBuild integration instead of a separate Node-based toolchain step.
 
 This repository is currently 100% AI-generated code. Because of that, no pull request will be accepted without prior approval from the maintainer. If you want to contribute, open an issue first and wait for confirmation before investing time in a PR.
 
@@ -24,7 +24,7 @@ This repository is currently 100% AI-generated code. Because of that, no pull re
 Add the package to an ASP.NET Core project:
 
 ```bash
-dotnet add package AspNetCore.Bundling.ESBuild
+dotnet add package ESBuild.AspNetCore
 ```
 
 Then create an `esbuild.json` file in the project root.
@@ -179,7 +179,7 @@ This allows Debug and Release to output different files:
 }
 ```
 
-When splitting is enabled, the package tracks emitted chunk files using esbuild metafile output and persists the discovered output set under `obj/AspNetCore.Bundling.ESBuild`.
+When splitting is enabled, the package tracks emitted chunk files using esbuild metafile output and persists the discovered output set under `obj/ESBuild.AspNetCore`.
 
 ## Merge behavior
 

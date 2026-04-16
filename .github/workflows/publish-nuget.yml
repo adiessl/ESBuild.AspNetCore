@@ -22,7 +22,7 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          [xml]$project = Get-Content 'src/AspNetCore.Bundling.ESBuild/AspNetCore.Bundling.ESBuild.csproj'
+          [xml]$project = Get-Content 'src/ESBuild.AspNetCore/ESBuild.AspNetCore.csproj'
           $propertyGroups = @($project.Project.PropertyGroup)
           $upstream = ($propertyGroups | Where-Object { $_.ESBuildUpstreamVersion } | Select-Object -First 1).ESBuildUpstreamVersion
           $wrapper = ($propertyGroups | Where-Object { $_.ESBuildWrapperRevision -ne $null } | Select-Object -First 1).ESBuildWrapperRevision
@@ -38,13 +38,13 @@ jobs:
           "package_version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Build solution
-        run: dotnet build AspNetCore.Bundling.ESBuild.slnx -c Release
+        run: dotnet build ESBuild.AspNetCore.slnx -c Release
 
       - name: Run unit tests
-        run: dotnet test AspNetCore.Bundling.ESBuild.slnx -c Release --no-build
+        run: dotnet test ESBuild.AspNetCore.slnx -c Release --no-build
 
       - name: Pack package
-        run: dotnet pack src/AspNetCore.Bundling.ESBuild/AspNetCore.Bundling.ESBuild.csproj -c Release --no-build -o artifacts/packages
+        run: dotnet pack src/ESBuild.AspNetCore/ESBuild.AspNetCore.csproj -c Release --no-build -o artifacts/packages
 
       - name: Run smoke tests
         shell: pwsh
