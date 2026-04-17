@@ -13,7 +13,7 @@
         Examples: 0.27.5, 0.27.5.1, 0.27.5.2
     -->
     <ESBuildUpstreamVersion>0.28.0</ESBuildUpstreamVersion>
-    <ESBuildWrapperRevision></ESBuildWrapperRevision>
+    <ESBuildWrapperRevision>1</ESBuildWrapperRevision>
     <Version Condition="'$(ESBuildWrapperRevision)' == ''">$(ESBuildUpstreamVersion)</Version>
     <Version Condition="'$(ESBuildWrapperRevision)' != ''">$(ESBuildUpstreamVersion).$(ESBuildWrapperRevision)</Version>
     <Authors>Alexander Diessl</Authors>

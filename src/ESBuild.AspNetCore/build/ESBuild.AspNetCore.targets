@@ -9,9 +9,33 @@
   <UsingTask TaskName="ESBuild.AspNetCore.Tasks.CompileESBuild"
              AssemblyFile="$(ESBuildTasksAssembly)"
              Condition="Exists('$(ESBuildTasksAssembly)')" />
+  <UsingTask TaskName="ESBuild.AspNetCore.Tasks.ResolveESBuildOutputs"
+             AssemblyFile="$(ESBuildTasksAssembly)"
+             Condition="Exists('$(ESBuildTasksAssembly)')" />
   <UsingTask TaskName="ESBuild.AspNetCore.Tasks.CleanESBuildOutputs"
              AssemblyFile="$(ESBuildTasksAssembly)"
              Condition="Exists('$(ESBuildTasksAssembly)')" />
+
+  <Target Name="ResolveESBuildGeneratedContent"
+          BeforeTargets="AssignTargetPaths;ResolveProjectStaticWebAssets"
+          Condition="'$(DesignTimeBuild)' != 'true' AND Exists('$(ESBuildTasksAssembly)') AND Exists('$(ESBuildConfigFile)')">
+    <ResolveESBuildOutputs ESBuildFile="$(ESBuildConfigFile)"
+                           Configuration="$(ESBuildConfiguration)"
+                           ProjectDirectory="$(MSBuildProjectDirectory)"
+                           TargetFramework="$(TargetFramework)"
+                           TargetFrameworks="$(TargetFrameworks)">
+      <Output TaskParameter="OutputFiles"
+              ItemName="_ESBuildConfiguredOutputFiles" />
+    </ResolveESBuildOutputs>
+
+    <ItemGroup>
+      <_ESBuildConfiguredContent Include="@(_ESBuildConfiguredOutputFiles)"
+                                 Condition="$([System.String]::Copy('%(Identity)').StartsWith('wwwroot\')) Or $([System.String]::Copy('%(Identity)').StartsWith('wwwroot/'))" />
+      <None Remove="@(_ESBuildConfiguredContent)" />
+      <Content Include="@(_ESBuildConfiguredContent)"
+               Exclude="@(Content)" />
+    </ItemGroup>
+  </Target>
 
   <Target Name="CompileESBuild"
           BeforeTargets="Build;ResolveProjectStaticWebAssets"
@@ -30,7 +54,11 @@
     <ItemGroup>
       <None Remove="@(ESBuildGeneratedFiles)" />
       <_NewESBuildGeneratedFiles Include="@(ESBuildGeneratedFiles)" Exclude="@(Content)" />
-      <Content Include="@(_NewESBuildGeneratedFiles)" />
+      <_NewESBuildGeneratedContentCandidate Include="$([MSBuild]::MakeRelative('$(MSBuildProjectDirectory)\', '%(_NewESBuildGeneratedFiles.Identity)'))"
+                                            Condition="'%(_NewESBuildGeneratedFiles.Identity)' != ''" />
+      <_NewESBuildGeneratedContent Include="@(_NewESBuildGeneratedContentCandidate)"
+                                   Condition="!$([System.String]::Copy('%(Identity)').StartsWith('wwwroot\')) And !$([System.String]::Copy('%(Identity)').StartsWith('wwwroot/'))" />
+      <Content Include="@(_NewESBuildGeneratedContent)" />
       <FileWrites Include="@(ESBuildGeneratedFiles)" />
     </ItemGroup>
   </Target>

@@ -509,10 +509,14 @@ function Test-RclHostAppPublish {
     $rclMapPath = Join-Path $workingRoot 'BasicRcl/wwwroot/js/library.js.map'
     $hostPublishManifestPath = Join-Path $workingRoot "HostApp/obj/$Configuration/net8.0/staticwebassets.publish.json"
     $publishedEndpointsManifestPath = Join-Path $publishDirectory 'HostApp.staticwebassets.endpoints.json'
+    $publishedRclScriptPath = Join-Path $publishDirectory 'wwwroot/_content/BasicRcl/js/library.js'
+    $publishedIncorrectRclScriptPath = Join-Path $publishDirectory 'wwwroot/js/library.js'
 
     Assert-True (Test-Path $rclBundlePath) "Expected referenced RCL bundle to exist before host publish: $rclBundlePath"
     Assert-True (Test-Path $hostPublishManifestPath) "Expected host publish static web assets manifest to exist: $hostPublishManifestPath"
     Assert-True (Test-Path $publishedEndpointsManifestPath) "Expected published endpoints manifest to exist: $publishedEndpointsManifestPath"
+    Assert-True (Test-Path $publishedRclScriptPath) "Expected published RCL bundle to exist under static web assets path: $publishedRclScriptPath"
+    Assert-True (-not (Test-Path $publishedIncorrectRclScriptPath)) "Did not expect published RCL bundle at host content path: $publishedIncorrectRclScriptPath"
 
     $rclBundleContent = Get-Content $rclBundlePath -Raw
     Assert-True ($rclBundleContent.Contains('Hosted BasicRcl says hello')) 'Expected referenced RCL bundled output to contain the expected content.'
