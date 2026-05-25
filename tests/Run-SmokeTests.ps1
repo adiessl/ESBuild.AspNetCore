@@ -435,6 +435,33 @@ function Test-InvalidConfigWebApp {
     Assert-True ($output.Contains("Bundle 'Scripts/site.ts' uses unsupported esbuild format 'not-a-real-format'")) 'Expected invalid config build output to mention the unsupported format.'
 }
 
+function Test-DiagnosticsWebApp {
+    $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/DiagnosticsWebApp'
+    $workingDirectory = New-TempCopy -SourceDirectory $source -Name 'DiagnosticsWebApp'
+    $projectPath = Join-Path $workingDirectory 'DiagnosticsWebApp.csproj'
+
+    $output = Invoke-DotNet -Arguments @(
+        'build',
+        $projectPath,
+        '-c', 'Debug',
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
+        '-p:RestoreIgnoreFailedSources=true'
+    ) -WorkingDirectory $workingDirectory -ExpectFailure
+
+    # Verify that the specific esbuild warning is classified and logged as a real MSBuild warning
+    Assert-True ($output -match 'warning\s*:\s*.*\s*\[WARNING\]\s*Duplicate key "a" in object literal') 'Expected esbuild duplicate key warning to be forwarded as an MSBuild warning.'
+    
+    # Verify that the specific esbuild error is classified and logged as a real MSBuild error
+    Assert-True ($output -match 'error\s*:\s*.*\s*\[ERROR\]\s*(Unexpected ";"|Expected expression|Expected identifier)') 'Expected esbuild syntax error to be forwarded as an MSBuild error.'
+    
+    # Verify the summary count matches exactly
+    Assert-True ($output -match '1\s*Warning\(s\)') 'Expected MSBuild summary to report exactly 1 Warning.'
+    Assert-True ($output -match '1\s*Error\(s\)') 'Expected MSBuild summary to report exactly 1 Error.'
+}
+
+
+
 function Test-BasicRcl {
     param(
         [Parameter(Mandatory = $true)]
@@ -555,6 +582,7 @@ Test-MultiTargetWebApp
 Test-SplittingWebApp
 Test-ConfigurationOverrideWebApp
 Test-InvalidConfigWebApp
+Test-DiagnosticsWebApp
 Test-BasicRcl -Configuration 'Debug'
 Test-BasicRcl -Configuration 'Release'
 Test-RclHostAppPublish -Configuration 'Debug'

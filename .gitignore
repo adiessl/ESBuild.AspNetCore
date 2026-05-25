@@ -55,3 +55,8 @@ nunit-*.xml
 
 # AI
 .codex
+
+# Generated files in tests
+tests/**/*.js
+tests/**/*.js.map
+

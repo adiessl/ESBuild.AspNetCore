@@ -17,6 +17,7 @@ internal static class EsbuildCommandBuilder
             $"--target={bundle.Target}",
             $"--format={bundle.Format}",
             $"--platform={bundle.Platform}",
+            "--log-level=warning",
         };
 
         if (!string.IsNullOrWhiteSpace(output))

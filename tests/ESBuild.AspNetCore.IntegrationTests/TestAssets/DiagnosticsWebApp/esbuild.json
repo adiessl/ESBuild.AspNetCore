@@ -1,0 +1,12 @@
+{
+  "Bundles": [
+    {
+      "EntryPoint": "Scripts/warning.ts",
+      "Output": "wwwroot/js/warning.js"
+    },
+    {
+      "EntryPoint": "Scripts/error.ts",
+      "Output": "wwwroot/js/error.js"
+    }
+  ]
+}

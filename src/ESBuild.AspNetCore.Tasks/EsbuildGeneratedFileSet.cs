@@ -97,4 +97,66 @@ internal static class EsbuildGeneratedFileSet
             .OrderBy(static output => output, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
+
+    public static string GetRelativePath(string rootFolder, string path)
+    {
+        var normalizedRoot = TrimEndingDirectorySeparators(Path.GetFullPath(rootFolder));
+        var normalizedPath = Path.GetFullPath(path);
+        var comparison = Path.DirectorySeparatorChar == '\\'
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        if (string.Equals(normalizedRoot, normalizedPath, comparison))
+        {
+            return string.Empty;
+        }
+
+        var rootWithSeparator = normalizedRoot + Path.DirectorySeparatorChar;
+        return normalizedPath.StartsWith(rootWithSeparator, comparison)
+            ? normalizedPath.Substring(rootWithSeparator.Length)
+            : path;
+    }
+
+    private static string TrimEndingDirectorySeparators(string path)
+    {
+        var root = Path.GetPathRoot(path);
+        while (path.Length > root.Length && IsDirectorySeparator(path[path.Length - 1]))
+        {
+            path = path.Substring(0, path.Length - 1);
+        }
+
+        return path;
+    }
+
+    private static bool IsDirectorySeparator(char value)
+    {
+        return value == Path.DirectorySeparatorChar || value == Path.AltDirectorySeparatorChar;
+    }
+
+    public static string GetFormattedFileSize(string path)
+    {
+        try
+        {
+            var fileInfo = new FileInfo(path);
+            if (!fileInfo.Exists)
+            {
+                return string.Empty;
+            }
+
+            double bytes = fileInfo.Length;
+            if (bytes >= 1024 * 1024)
+            {
+                return $"{(bytes / 1024 / 1024).ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}mb";
+            }
+            if (bytes >= 1024)
+            {
+                return $"{(bytes / 1024).ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}kb";
+            }
+            return $"{bytes}b";
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
 }
