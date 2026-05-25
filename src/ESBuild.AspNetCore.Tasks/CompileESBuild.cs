@@ -239,6 +239,7 @@ public sealed class CompileESBuild : Microsoft.Build.Utilities.Task
             }
 
             EsbuildGeneratedFileSet.WriteManifest(manifestPath, generatedOutputs);
+            LogBundleOutputs(rootFolder, generatedOutputs);
             return generatedOutputs;
         }
         finally
@@ -341,5 +342,17 @@ public sealed class CompileESBuild : Microsoft.Build.Utilities.Task
         return Path.GetFullPath(Path.IsPathRooted(path)
             ? path
             : Path.Combine(rootFolder, path));
+    }
+
+    private void LogBundleOutputs(string rootFolder, IReadOnlyList<string> outputs)
+    {
+        var sb = new StringBuilder();
+        foreach (var path in outputs)
+        {
+            var relativePath = EsbuildGeneratedFileSet.GetRelativePath(rootFolder, path).Replace('\\', '/');
+            var sizeString = EsbuildGeneratedFileSet.GetFormattedFileSize(path);
+            sb.AppendLine($"  {relativePath} {sizeString}");
+        }
+        Log.LogMessage(MessageImportance.High, sb.ToString().TrimEnd());
     }
 }
