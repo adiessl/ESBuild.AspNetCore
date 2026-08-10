@@ -222,6 +222,48 @@ Typical failure cases:
 
 Builds fail with explicit error messages for invalid configuration.
 
+esbuild warnings and errors are emitted as structured MSBuild diagnostics. Visual Studio and other MSBuild-based tools can therefore associate them with the originating TypeScript file and display their line, column, severity, and `ES####` diagnostic code in the IDE.
+
+For example:
+
+```text
+Scripts/site.ts(1,21): warning ES0015: Duplicate key "a" in object literal
+```
+
+Warning codes are assigned by esbuild. Many warning types have a specific code, while generic errors can use `ES0000`.
+
+### Warning policies
+
+esbuild diagnostics originate from an MSBuild task instead of the C# compiler. Consequently, `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` by itself does not promote esbuild warnings to errors.
+
+To treat all MSBuild task warnings, including esbuild warnings, as errors:
+
+```xml
+<PropertyGroup>
+  <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
+</PropertyGroup>
+```
+
+To treat selected warning codes as errors:
+
+```xml
+<PropertyGroup>
+  <WarningsAsErrors>$(WarningsAsErrors);ES0015</WarningsAsErrors>
+</PropertyGroup>
+```
+
+To suppress selected warning codes:
+
+```xml
+<PropertyGroup>
+  <NoWarn>$(NoWarn);ES0015</NoWarn>
+</PropertyGroup>
+```
+
+The explicit MSBuild equivalents for the last two settings are `MSBuildWarningsAsErrors` and `MSBuildWarningsAsMessages`. The .NET SDK maps `WarningsAsErrors` and `NoWarn` to those MSBuild properties.
+
+`.editorconfig` entries such as `dotnet_diagnostic.ES0015.severity = none` do not affect esbuild diagnostics because esbuild is an external build tool, not a Roslyn analyzer.
+
 ## Repository notes
 
 - This project is intentionally build-time only

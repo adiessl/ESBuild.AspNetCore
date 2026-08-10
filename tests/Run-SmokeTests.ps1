@@ -449,13 +449,10 @@ function Test-DiagnosticsWebApp {
         '-p:RestoreIgnoreFailedSources=true'
     ) -WorkingDirectory $workingDirectory -ExpectFailure
 
-    # Verify that the specific esbuild warning is classified and logged as a real MSBuild warning
-    Assert-True ($output -match 'warning\s*:\s*.*\s*\[WARNING\]\s*Duplicate key "a" in object literal') 'Expected esbuild duplicate key warning to be forwarded as an MSBuild warning.'
-    
-    # Verify that the specific esbuild error is classified and logged as a real MSBuild error
-    Assert-True ($output -match 'error\s*:\s*.*\s*\[ERROR\]\s*(Unexpected ";"|Expected expression|Expected identifier)') 'Expected esbuild syntax error to be forwarded as an MSBuild error.'
-    
-    # Verify the summary count matches exactly
+    # Verify that esbuild diagnostics retain their file, location, severity, and code in MSBuild output.
+    Assert-True ($output -match '[\\/]Scripts[\\/]warning\.ts\(1,21\): warning ES0015: Duplicate key "a" in object literal') 'Expected the esbuild warning to be forwarded as a structured MSBuild diagnostic.'
+    Assert-True ($output -match '[\\/]Scripts[\\/]error\.ts\(1,10\): error ES0000: (Unexpected ";"|Expected expression|Expected identifier)') 'Expected the esbuild error to be forwarded as a structured MSBuild diagnostic.'
+
     Assert-True ($output -match '1\s*Warning\(s\)') 'Expected MSBuild summary to report exactly 1 Warning.'
     Assert-True ($output -match '1\s*Error\(s\)') 'Expected MSBuild summary to report exactly 1 Error.'
 }

@@ -53,6 +53,7 @@ public sealed class CommandBuilderTests
         Assert.Contains("--alias:@shared=./Scripts/shared", arguments);
         Assert.Contains("--loader:.svg=text", arguments);
         Assert.Contains("--public-path=/static", arguments);
+        Assert.Contains("--log-style=visualstudio", arguments);
         Assert.Contains("--log-level=warning", arguments);
     }
 
