@@ -188,9 +188,14 @@ public sealed class CompileESBuild : Microsoft.Build.Utilities.Task
                     Log.LogMessage(MessageImportance.Normal, stdout.Trim());
                 }
 
-                Log.LogError(string.IsNullOrWhiteSpace(stderr)
-                    ? $"esbuild exited with code {process.ExitCode}."
-                    : stderr.Trim());
+                var loggedError = LogEsbuildOutput(stderr, MessageImportance.Normal);
+                if (!loggedError)
+                {
+                    Log.LogError(string.IsNullOrWhiteSpace(stderr)
+                        ? $"esbuild exited with code {process.ExitCode}."
+                        : stderr.Trim());
+                }
+
                 return null;
             }
 
@@ -201,7 +206,7 @@ public sealed class CompileESBuild : Microsoft.Build.Utilities.Task
 
             if (!string.IsNullOrWhiteSpace(stderr))
             {
-                Log.LogWarning(stderr.Trim());
+                LogEsbuildOutput(stderr, MessageImportance.Normal);
             }
 
             IReadOnlyList<string> generatedOutputs;
@@ -354,5 +359,23 @@ public sealed class CompileESBuild : Microsoft.Build.Utilities.Task
             sb.AppendLine($"  {relativePath} {sizeString}");
         }
         Log.LogMessage(MessageImportance.High, sb.ToString().TrimEnd());
+    }
+
+    private bool LogEsbuildOutput(string output, MessageImportance messageImportance)
+    {
+        var loggedError = false;
+        using var reader = new StringReader(output);
+
+        while (reader.ReadLine() is { } line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            loggedError |= Log.LogMessageFromText(line, messageImportance);
+        }
+
+        return loggedError;
     }
 }
