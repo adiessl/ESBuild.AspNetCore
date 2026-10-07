@@ -4,7 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <ESBuildAspNetCorePackageVersion Condition="'$(ESBuildAspNetCorePackageVersion)' == ''">0.27.5</ESBuildAspNetCorePackageVersion>
+    <ESBuildAspNetCorePackageVersion Condition="'$(ESBuildAspNetCorePackageVersion)' == ''">0.28.2</ESBuildAspNetCorePackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
