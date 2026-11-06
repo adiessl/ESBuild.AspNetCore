@@ -190,8 +190,8 @@ Effective bundle settings are resolved in this order:
 
 1. Package defaults
 2. Root `Defaults`
-3. Root bundle values
-4. Configuration `Defaults`
+3. Configuration `Defaults`
+4. Root bundle values
 5. Configuration-specific bundle override values
 
 If a configuration-specific bundle override specifies `Output`, it replaces `Outdir`. If it specifies `Outdir`, it replaces `Output`.
