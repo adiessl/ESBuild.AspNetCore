@@ -79,6 +79,7 @@ Top-level shape:
 
 Supported default fields:
 
+- `Bundle`
 - `Minify`
 - `Sourcemap`
 - `Target`
@@ -87,6 +88,7 @@ Supported default fields:
 
 Built-in package defaults:
 
+- `Bundle: true`
 - `Minify: false`
 - `Sourcemap: true`
 - `Target: "es2020"`
@@ -102,6 +104,7 @@ Each bundle supports:
 - `Outdir`
 - `Optional`
 - `Splitting`
+- `Bundle`
 - `Minify`
 - `Sourcemap`
 - `Target`
@@ -119,6 +122,8 @@ Rules:
 - Each bundle must define exactly one of `Output` or `Outdir`
 - `Splitting` requires `Outdir`
 - `Splitting` requires `Format: "esm"`
+- `Bundle: false` rejects nonempty `External` and `Alias`, `Splitting: true`, and `Format` set directly on the bundle (including configuration-specific bundle overrides)
+- With `Bundle: false`, `Format` inherited from `Defaults` is ignored
 - `Optional: true` skips the bundle if the entry point file does not exist
 
 ### `Configurations`
@@ -131,6 +136,44 @@ Each configuration can contain:
 `Configurations.<name>.Defaults` overrides root defaults for that build configuration.
 
 `Configurations.<name>.Bundles` applies per-bundle overrides matched by `EntryPoint`. Override entries must define `EntryPoint`, and that `EntryPoint` must match exactly one root bundle.
+
+## Example: minifying classic global scripts
+
+Set `Bundle: false` to process each entry without bundling modules. This is useful for classic browser scripts, such as JavaScript emitted by `tsc --outFile` from TypeScript namespaces, loaded with plain `<script>` tags. Their namespace variables and top-level functions can then keep their original global names, including functions called only through Blazor JS interop, other scripts, or server-generated JavaScript.
+
+```json
+{
+  "Defaults": {
+    "Bundle": false
+  },
+  "Bundles": [
+    {
+      "EntryPoint": "Scripts/classic.js",
+      "Output": "wwwroot/js/classic.min.js"
+    }
+  ],
+  "Configurations": {
+    "Debug": {
+      "Defaults": {
+        "Minify": false,
+        "Sourcemap": true
+      }
+    },
+    "Release": {
+      "Defaults": {
+        "Minify": true,
+        "Sourcemap": false
+      }
+    }
+  }
+}
+```
+
+Without bundling, the package omits both `--bundle` and `--format`. Omitting the format is essential to preserve top-level names during minification; see [esbuild's minification documentation](https://esbuild.github.io/api/#minify). The input must itself be a classic script; disabling bundling does not turn module imports or exports into globals or combine dependencies into the output.
+
+`Target`, `Platform`, `Minify`, `Sourcemap`, `Define`, `Loader`, and `PublicPath` still apply, as do `Output` (or `Outdir`) and the usual diagnostics. Generated files retain the same up-to-date checks, cleaning, and static web asset/publish integration.
+
+`External`, `Alias`, and code splitting require bundling and are rejected when enabled with `Bundle: false`. A `Format` set directly on a non-bundled entry or its configuration-specific bundle override is also rejected. A `Format` inherited from root or configuration `Defaults`, including the built-in `iife`, is ignored, so shared defaults can serve bundled and non-bundled entries. Existing configurations keep bundling by default.
 
 ## Example: configuration-specific bundle override
 
@@ -194,6 +237,8 @@ Effective bundle settings are resolved in this order:
 4. Root bundle values
 5. Configuration-specific bundle override values
 
+This order also applies to `Bundle`. Explicit bundle values take precedence over configuration defaults.
+
 If a configuration-specific bundle override specifies `Output`, it replaces `Outdir`. If it specifies `Outdir`, it replaces `Output`.
 
 ## Supported platforms
@@ -218,6 +263,7 @@ Typical failure cases:
 - unsupported `Platform`
 - `Splitting` used without `Outdir`
 - `Splitting` used with a format other than `esm`
+- `External`, `Alias`, `Splitting`, or an explicit bundle `Format` used with `Bundle: false`
 - invalid configuration-specific bundle override matching
 
 Builds fail with explicit error messages for invalid configuration.

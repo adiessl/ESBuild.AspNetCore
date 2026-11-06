@@ -4,6 +4,166 @@ namespace ESBuild.AspNetCore.Tasks.Tests;
 
 public sealed class ConfigLoadingTests
 {
+    [Theory]
+    [InlineData(null, null, null, null, true)]
+    [InlineData(false, null, null, null, false)]
+    [InlineData(true, null, null, null, true)]
+    [InlineData(null, false, null, null, false)]
+    [InlineData(false, true, null, null, true)]
+    [InlineData(true, null, false, null, false)]
+    [InlineData(false, null, true, null, true)]
+    [InlineData(null, true, false, null, true)]
+    [InlineData(null, false, true, null, false)]
+    [InlineData(null, null, null, false, false)]
+    [InlineData(false, false, false, true, true)]
+    [InlineData(true, true, true, false, false)]
+    public void Load_MergesBundleOptionInExistingOrder(
+        bool? rootDefault, bool? rootBundle, bool? configurationDefault, bool? configurationBundle, bool expected)
+    {
+        var path = CreateConfigFile(System.Text.Json.JsonSerializer.Serialize(new
+        {
+            Defaults = new { Bundle = rootDefault },
+            Bundles = new[] { new { EntryPoint = "Scripts/classic.js", Output = "wwwroot/js/classic.js", Bundle = rootBundle } },
+            Configurations = new
+            {
+                Release = new
+                {
+                    Defaults = new { Bundle = configurationDefault },
+                    Bundles = new[] { new { EntryPoint = "Scripts/classic.js", Bundle = configurationBundle } },
+                },
+            },
+        }));
+
+        try
+        {
+            Assert.Equal(expected, Assert.Single(EsbuildConfigLoader.Load(path, "Release")).Bundle);
+            Assert.Equal(rootBundle ?? rootDefault ?? true, Assert.Single(EsbuildConfigLoader.Load(path, "Debug")).Bundle);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Theory]
+    [InlineData("iife")]
+    [InlineData("esm")]
+    [InlineData("ignored")]
+    public void Load_IgnoresDefaultFormatWithoutBundling(string format)
+    {
+        var path = CreateConfigFile($$"""
+            {
+              "Defaults": { "Bundle": false, "Format": "{{format}}" },
+              "Bundles": [{ "EntryPoint": "Scripts/classic.js", "Output": "wwwroot/js/classic.js" }],
+              "Configurations": { "Release": { "Defaults": { "Format": "{{format}}" } } }
+            }
+            """);
+
+        try
+        {
+            foreach (var configuration in new[] { "Debug", "Release" })
+            {
+                var bundle = Assert.Single(EsbuildConfigLoader.Load(path, configuration));
+                Assert.False(bundle.Bundle);
+                var arguments = EsbuildCommandBuilder.BuildArguments(bundle, bundle.EntryPoint, bundle.Output, null);
+                Assert.DoesNotContain(arguments, static argument => argument.StartsWith("--format=", StringComparison.Ordinal));
+            }
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Theory]
+    [InlineData("External", "[\"jquery\"]", false)]
+    [InlineData("External", "[\"jquery\"]", true)]
+    [InlineData("Alias", "{\"@shared\":\"./Scripts/shared\"}", false)]
+    [InlineData("Alias", "{\"@shared\":\"./Scripts/shared\"}", true)]
+    [InlineData("Splitting", "true", false)]
+    [InlineData("Splitting", "true", true)]
+    [InlineData("Format", "\"cjs\"", false)]
+    [InlineData("Format", "\"esm\"", true)]
+    public void Load_RejectsBundleOnlyOptionsWithoutBundling(string option, string value, bool inOverride)
+    {
+        var optionJson = $"\"{option}\": {value}";
+        var path = CreateConfigFile($$"""
+            {
+              "Defaults": { "Bundle": false },
+              "Bundles": [{
+                "EntryPoint": "Scripts/classic.js", "Outdir": "wwwroot/js"{{(inOverride ? "" : ", " + optionJson)}}
+              }],
+              "Configurations": {
+                "Release": { "Bundles": [{ "EntryPoint": "Scripts/classic.js"{{(inOverride ? ", " + optionJson : "")}} }] }
+              }
+            }
+            """);
+
+        try
+        {
+            var exception = Assert.Throws<EsbuildConfigException>(() => EsbuildConfigLoader.Load(path, "Release"));
+            Assert.Contains("Scripts/classic.js", exception.Message);
+            Assert.Contains($"'{option}'", exception.Message);
+            Assert.Contains("'Bundle' is false", exception.Message);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Theory]
+    [InlineData("Defaults")]
+    [InlineData("Bundles")]
+    public void Load_RejectsRootBundleFormatWhenConfigurationDisablesBundling(string overrideLocation)
+    {
+        var overrideJson = overrideLocation == "Defaults"
+            ? "\"Defaults\": { \"Bundle\": false }"
+            : "\"Bundles\": [{ \"EntryPoint\": \"Scripts/classic.js\", \"Bundle\": false }]";
+        var path = CreateConfigFile($$"""
+            {
+              "Bundles": [{ "EntryPoint": "Scripts/classic.js", "Output": "wwwroot/js/classic.js", "Format": "cjs" }],
+              "Configurations": { "Release": { {{overrideJson}} } }
+            }
+            """);
+
+        try
+        {
+            Assert.True(Assert.Single(EsbuildConfigLoader.Load(path, "Debug")).Bundle);
+            var exception = Assert.Throws<EsbuildConfigException>(() => EsbuildConfigLoader.Load(path, "Release"));
+            Assert.Contains("'Format'", exception.Message);
+            Assert.Contains("'Bundle' is false", exception.Message);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Load_AllowsEmptyBundleOnlyOptionsWithoutBundling()
+    {
+        var path = CreateConfigFile("""
+            {
+              "Bundles": [{
+                "EntryPoint": "Scripts/classic.js", "Output": "wwwroot/js/classic.js",
+                "Bundle": false, "External": [], "Alias": {}, "Splitting": false
+              }]
+            }
+            """);
+
+        try
+        {
+            var bundle = Assert.Single(EsbuildConfigLoader.Load(path, "Debug"));
+            Assert.False(bundle.Bundle);
+            Assert.Equal("iife", bundle.Format);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     [Fact]
     public void Load_UsesDefaultsAndConfigurationOverrides()
     {

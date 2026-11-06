@@ -10,16 +10,24 @@ internal static class EsbuildCommandBuilder
         string? output,
         string? outdir)
     {
-        var arguments = new List<string>
+        var arguments = new List<string> { entryPoint };
+        if (bundle.Bundle)
         {
-            entryPoint,
-            "--bundle",
-            $"--target={bundle.Target}",
-            $"--format={bundle.Format}",
+            arguments.Add("--bundle");
+        }
+
+        arguments.Add($"--target={bundle.Target}");
+        if (bundle.Bundle)
+        {
+            arguments.Add($"--format={bundle.Format}");
+        }
+
+        arguments.AddRange(new[]
+        {
             $"--platform={bundle.Platform}",
             "--log-style=visualstudio",
             "--log-level=warning",
-        };
+        });
 
         if (!string.IsNullOrWhiteSpace(output))
         {

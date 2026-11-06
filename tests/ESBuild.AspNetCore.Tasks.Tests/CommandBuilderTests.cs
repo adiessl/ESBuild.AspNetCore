@@ -4,6 +4,45 @@ namespace ESBuild.AspNetCore.Tasks.Tests;
 
 public sealed class CommandBuilderTests
 {
+    [Theory]
+    [InlineData(null)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void BuildArguments_OnlyAddsBundleAndFormatWhenBundling(bool? bundleSetting)
+    {
+        var bundle = new EffectiveEsbuildBundle
+        {
+            Minify = true,
+            Sourcemap = true,
+            Target = "es2020",
+            Format = "iife",
+            Platform = "browser",
+            Define = new Dictionary<string, string> { ["DEBUG"] = "false" },
+            Loader = new Dictionary<string, string> { [".js"] = "js" },
+            PublicPath = "/static",
+        };
+        if (bundleSetting.HasValue)
+        {
+            bundle.Bundle = bundleSetting.Value;
+        }
+
+        var arguments = EsbuildCommandBuilder.BuildArguments(bundle, "classic.js", "classic.min.js", null);
+
+        Assert.Equal(bundleSetting ?? true, arguments.Contains("--bundle"));
+        Assert.Equal(bundleSetting ?? true, arguments.Any(static argument => argument.StartsWith("--format=", StringComparison.Ordinal)));
+        Assert.Contains("classic.js", arguments);
+        Assert.Contains("--outfile=classic.min.js", arguments);
+        Assert.Contains("--target=es2020", arguments);
+        Assert.Contains("--platform=browser", arguments);
+        Assert.Contains("--minify", arguments);
+        Assert.Contains("--sourcemap", arguments);
+        Assert.Contains("--define:DEBUG=false", arguments);
+        Assert.Contains("--loader:.js=js", arguments);
+        Assert.Contains("--public-path=/static", arguments);
+        Assert.Contains("--log-style=visualstudio", arguments);
+        Assert.Contains("--log-level=warning", arguments);
+    }
+
     [Fact]
     public void BuildArguments_IncludesExpectedFlags()
     {

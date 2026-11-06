@@ -12,6 +12,8 @@ internal sealed class EsbuildBundle
 
     public bool? Splitting { get; set; }
 
+    public bool? Bundle { get; set; }
+
     public bool? Minify { get; set; }
 
     public bool? Sourcemap { get; set; }
