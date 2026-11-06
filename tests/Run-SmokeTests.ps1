@@ -246,6 +246,78 @@ function Test-BasicWebApp {
     }
 }
 
+function Test-NonBundlingWebApp {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Configuration
+    )
+
+    $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/NonBundlingWebApp'
+    $workingDirectory = New-TempCopy -SourceDirectory $source -Name "NonBundlingWebApp-$Configuration"
+    $projectPath = Join-Path $workingDirectory 'NonBundlingWebApp.csproj'
+    $buildArguments = @(
+        $projectPath,
+        '-c', $Configuration,
+        '-v:n',
+        "-p:ESBuildAspNetCorePackageVersion=$PackageVersion",
+        "-p:RestoreAdditionalProjectSources=$RestoreSources",
+        '-p:RestoreIgnoreFailedSources=true'
+    )
+    Invoke-DotNet -Arguments (@('build') + $buildArguments) -WorkingDirectory $workingDirectory | Out-Null
+
+    $scriptPath = Join-Path $workingDirectory 'wwwroot/js/classic.js'
+    $mapPath = "$scriptPath.map"
+    $scriptContent = Get-Content $scriptPath -Raw
+    Assert-True ($scriptContent -cmatch '\bvar\s+widgetLibrary\b') 'Expected the classic namespace to retain its original name.'
+    Assert-True ($scriptContent -cmatch '\bfunction\s+initWidget\(') 'Expected the uncalled interop function to retain its original name.'
+
+    $bundledContent = Get-Content (Join-Path $workingDirectory 'wwwroot/js/classic.bundled.js') -Raw
+    Assert-True ($bundledContent -cnotmatch '\bvar\s+widgetLibrary\b') 'Expected the bundled control to lose the original namespace name.'
+    Assert-True ($bundledContent -cnotmatch '\bfunction\s+initWidget\(') 'Expected the bundled control to drop the uncalled interop function.'
+
+    $expectSourcemap = $Configuration -eq 'Debug'
+    Assert-True ((Test-Path $mapPath) -eq $expectSourcemap) 'Expected classic script sourcemaps to follow the build configuration.'
+    if ($Configuration -eq 'Release') {
+        Assert-True ((Get-LineBreakCount -Content $scriptContent) -le 1) 'Expected the classic script to be minified.'
+    }
+
+    $manifestFiles = @(Get-ChildItem -Path (Join-Path $workingDirectory 'obj/ESBuild.AspNetCore') -Filter '*.outputs.json' -File)
+    $trackedOutputs = @($manifestFiles | ForEach-Object { Get-Content $_.FullName -Raw | ConvertFrom-Json })
+    Assert-True ($trackedOutputs -contains $scriptPath) 'Expected the classic script in the generated output manifests.'
+    Assert-True (($trackedOutputs -contains $mapPath) -eq $expectSourcemap) 'Expected generated output tracking to include the configured sourcemap.'
+
+    $assetManifest = Get-Content (Join-Path $workingDirectory "obj/$Configuration/net8.0/staticwebassets.build.json") -Raw | ConvertFrom-Json
+    $assetPaths = @($assetManifest.Assets | ForEach-Object { Normalize-PathForComparison -Path $_.Identity })
+    Assert-True ($assetPaths -contains (Normalize-PathForComparison -Path $scriptPath)) 'Expected the classic script in the static web assets manifest.'
+
+    $lastWriteTime = (Get-Item $scriptPath).LastWriteTimeUtc
+    $repeatOutput = Invoke-DotNet -Arguments (@('build', '--no-restore') + $buildArguments) -WorkingDirectory $workingDirectory
+    Assert-True (-not $repeatOutput.Contains('Building TypeScript:')) 'Expected an unchanged build to skip esbuild.'
+    Assert-True ((Get-Item $scriptPath).LastWriteTimeUtc -eq $lastWriteTime) 'Expected the up-to-date classic script to remain untouched.'
+
+    if ($Configuration -eq 'Release') {
+        $configPath = Join-Path $workingDirectory 'esbuild.json'
+        $configContent = Get-Content $configPath -Raw
+        Set-Content -LiteralPath $configPath -Value $configContent.Replace('"Bundle": false', '"Bundle": true')
+        Invoke-DotNet -Arguments (@('build', '--no-restore') + $buildArguments) -WorkingDirectory $workingDirectory | Out-Null
+        $rebuiltContent = Get-Content $scriptPath -Raw
+        Assert-True ($rebuiltContent -cnotmatch '\bvar\s+widgetLibrary\b') 'Expected changing Bundle to invalidate the previous output.'
+        Assert-True ($rebuiltContent -cnotmatch '\bfunction\s+initWidget\(') 'Expected bundling to remove the global interop function.'
+        Set-Content -LiteralPath $configPath -Value $configContent
+    }
+
+    $publishDirectory = Join-Path $workingDirectory 'publish'
+    Invoke-DotNet -Arguments (@('publish', '--no-restore', '-o', $publishDirectory) + $buildArguments) -WorkingDirectory $workingDirectory | Out-Null
+    $publishedContent = Get-Content (Join-Path $publishDirectory 'wwwroot/js/classic.js') -Raw
+    Assert-True ($publishedContent -cmatch '\bvar\s+widgetLibrary\b') 'Expected the published classic namespace to stay global.'
+    Assert-True ($publishedContent -cmatch '\bfunction\s+initWidget\(') 'Expected the published interop function to stay global.'
+    Assert-True ((Test-Path (Join-Path $publishDirectory 'wwwroot/js/classic.js.map')) -eq $expectSourcemap) 'Expected published sourcemaps to follow the build configuration.'
+
+    Invoke-DotNet -Arguments (@('clean') + $buildArguments) -WorkingDirectory $workingDirectory | Out-Null
+    Assert-True (-not (Test-Path $scriptPath)) 'Expected clean to remove the generated classic script.'
+    Assert-True (-not (Test-Path $mapPath)) 'Expected clean to remove the generated classic sourcemap.'
+}
+
 function Test-BasicWebAppFromDifferentWorkingDirectory {
     $source = Join-Path $PSScriptRoot 'ESBuild.AspNetCore.IntegrationTests/TestAssets/BasicWebApp'
     $workingDirectory = New-TempCopy -SourceDirectory $source -Name 'BasicWebApp-ExternalWorkingDirectory'
@@ -571,6 +643,8 @@ $RestoreSources = $ResolvedPackageFeed
 Test-RuntimeBinary
 Test-BasicWebApp -Configuration 'Debug'
 Test-BasicWebApp -Configuration 'Release'
+Test-NonBundlingWebApp -Configuration 'Debug'
+Test-NonBundlingWebApp -Configuration 'Release'
 Test-BasicWebAppFromDifferentWorkingDirectory
 Test-BasicWebAppClean
 Test-BasicWebAppPublish -Configuration 'Debug'

@@ -2,6 +2,8 @@ namespace ESBuild.AspNetCore.Tasks;
 
 internal sealed class EsbuildDefaults
 {
+    public bool? Bundle { get; set; }
+
     public bool? Minify { get; set; }
 
     public bool? Sourcemap { get; set; }

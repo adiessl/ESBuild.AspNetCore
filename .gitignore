@@ -59,4 +59,5 @@ nunit-*.xml
 # Generated files in tests
 tests/**/*.js
 tests/**/*.js.map
+!tests/ESBuild.AspNetCore.IntegrationTests/TestAssets/NonBundlingWebApp/Scripts/classic.js
 

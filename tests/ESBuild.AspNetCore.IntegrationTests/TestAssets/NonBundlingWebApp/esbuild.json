@@ -1,0 +1,33 @@
+{
+  "Defaults": {
+    "Bundle": false,
+    "Format": "iife"
+  },
+  "Bundles": [
+    {
+      "EntryPoint": "Scripts/classic.js",
+      "Output": "wwwroot/js/classic.js"
+    },
+    {
+      "EntryPoint": "Scripts/classic.js",
+      "Output": "wwwroot/js/classic.bundled.js",
+      "Bundle": true,
+      "Format": "cjs",
+      "Minify": true
+    }
+  ],
+  "Configurations": {
+    "Debug": {
+      "Defaults": {
+        "Minify": false,
+        "Sourcemap": true
+      }
+    },
+    "Release": {
+      "Defaults": {
+        "Minify": true,
+        "Sourcemap": false
+      }
+    }
+  }
+}

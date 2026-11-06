@@ -12,6 +12,8 @@ internal sealed class EffectiveEsbuildBundle
 
     public bool Splitting { get; set; }
 
+    public bool Bundle { get; set; } = true;
+
     public bool Minify { get; set; }
 
     public bool Sourcemap { get; set; }

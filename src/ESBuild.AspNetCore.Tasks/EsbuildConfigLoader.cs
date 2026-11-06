@@ -77,7 +77,7 @@ internal static class EsbuildConfigLoader
             }
 
             var bundleOptions = MergeBundleOptions(defaults, effectiveBundle);
-            ValidateBundleOptions(entryPoint, output, outdir, effectiveBundle.Splitting ?? false, bundleOptions);
+            ValidateBundleOptions(entryPoint, output, outdir, effectiveBundle, bundleOptions);
 
             bundles.Add(new EffectiveEsbuildBundle
             {
@@ -86,6 +86,7 @@ internal static class EsbuildConfigLoader
                 Outdir = outdir is null ? null : NormalizePath(outdir),
                 Optional = effectiveBundle.Optional ?? false,
                 Splitting = effectiveBundle.Splitting ?? false,
+                Bundle = bundleOptions.Bundle,
                 Minify = bundleOptions.Minify,
                 Sourcemap = bundleOptions.Sourcemap,
                 Target = bundleOptions.Target,
@@ -109,6 +110,7 @@ internal static class EsbuildConfigLoader
     {
         var merged = new EffectiveDefaults
         {
+            Bundle = true,
             Minify = false,
             Sourcemap = true,
             Target = "es2020",
@@ -127,6 +129,11 @@ internal static class EsbuildConfigLoader
         if (source is null)
         {
             return;
+        }
+
+        if (source.Bundle.HasValue)
+        {
+            destination.Bundle = source.Bundle.Value;
         }
 
         if (source.Minify.HasValue)
@@ -159,6 +166,7 @@ internal static class EsbuildConfigLoader
     {
         return new EffectiveBundleOptions
         {
+            Bundle = bundle.Bundle ?? defaults.Bundle,
             Minify = bundle.Minify ?? defaults.Minify,
             Sourcemap = bundle.Sourcemap ?? defaults.Sourcemap,
             Target = string.IsNullOrWhiteSpace(bundle.Target) ? defaults.Target : NormalizeValue(bundle.Target!),
@@ -241,6 +249,7 @@ internal static class EsbuildConfigLoader
                     : bundle.Outdir,
             Optional = bundleOverride.Optional ?? bundle.Optional,
             Splitting = bundleOverride.Splitting ?? bundle.Splitting,
+            Bundle = bundleOverride.Bundle ?? bundle.Bundle,
             Minify = bundleOverride.Minify ?? bundle.Minify,
             Sourcemap = bundleOverride.Sourcemap ?? bundle.Sourcemap,
             Target = bundleOverride.Target ?? bundle.Target,
@@ -258,10 +267,34 @@ internal static class EsbuildConfigLoader
         string entryPoint,
         string? output,
         string? outdir,
-        bool splitting,
+        EsbuildBundle bundle,
         EffectiveBundleOptions options)
     {
-        if (!AllowedFormats.Contains(options.Format))
+        var splitting = bundle.Splitting ?? false;
+        if (!options.Bundle)
+        {
+            if (!string.IsNullOrWhiteSpace(bundle.Format))
+            {
+                throw new EsbuildConfigException($"Bundle '{entryPoint}' cannot set 'Format' when 'Bundle' is false. Remove it from the bundle or move it to 'Defaults'.");
+            }
+
+            if (bundle.External?.Any(static value => !string.IsNullOrWhiteSpace(value)) == true)
+            {
+                throw new EsbuildConfigException($"Bundle '{entryPoint}' cannot use 'External' when 'Bundle' is false.");
+            }
+
+            if (bundle.Alias?.Count > 0)
+            {
+                throw new EsbuildConfigException($"Bundle '{entryPoint}' cannot use 'Alias' when 'Bundle' is false.");
+            }
+
+            if (splitting)
+            {
+                throw new EsbuildConfigException($"Bundle '{entryPoint}' cannot enable 'Splitting' when 'Bundle' is false.");
+            }
+        }
+
+        if (options.Bundle && !AllowedFormats.Contains(options.Format))
         {
             throw new EsbuildConfigException($"Bundle '{entryPoint}' uses unsupported esbuild format '{options.Format}'. Supported values: iife, cjs, esm.");
         }
@@ -336,6 +369,8 @@ internal static class EsbuildConfigLoader
 
     private sealed class EffectiveDefaults
     {
+        public bool Bundle { get; set; }
+
         public bool Minify { get; set; }
 
         public bool Sourcemap { get; set; }
@@ -349,6 +384,8 @@ internal static class EsbuildConfigLoader
 
     private sealed class EffectiveBundleOptions
     {
+        public bool Bundle { get; set; }
+
         public bool Minify { get; set; }
 
         public bool Sourcemap { get; set; }
